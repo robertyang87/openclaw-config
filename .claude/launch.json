@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev:web"],
+      "port": 5173,
+      "env": {
+        "PATH": "/Users/baggioustb/.local/share/fnm/node-versions/v24.14.0/installation/bin:/Users/baggioustb/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+      }
+    },
+    {
+      "name": "server",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev:server"],
+      "port": 3210,
+      "env": {
+        "PATH": "/Users/baggioustb/.local/share/fnm/node-versions/v24.14.0/installation/bin:/Users/baggioustb/.local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+      }
+    }
+  ]
+}

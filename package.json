@@ -1,0 +1,12 @@
+{
+  "name": "openclaw-config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenClaw Visual Configuration Manager",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "dev:web": "pnpm --filter @openclaw-config/web dev",
+    "dev:server": "pnpm --filter @openclaw-config/server dev"
+  }
+}
