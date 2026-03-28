@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Card, Row, Col, Typography, Space, Switch, Tag, message } from 'antd'
+import { Row, Col, Typography, Space, message } from 'antd'
 import { AppstoreOutlined } from '@ant-design/icons'
 import { getConfig, updateConfigSection } from '../api/config'
+import PluginCard from '../components/PluginCard'
 
 const { Title, Text } = Typography
 
@@ -12,11 +13,12 @@ const PLUGIN_META: Record<string, { name: string; desc: string; icon: string; co
   memory: { name: 'Memory', desc: 'Long-term memory and context recall', icon: '🧠', color: '#e17055' },
   skills: { name: 'Skills', desc: 'Custom skill scripts and workflows', icon: '⚡', color: '#fdcb6e' },
   voice: { name: 'Voice', desc: 'Voice input and TTS output', icon: '🎤', color: '#a29bfe' },
+  'claude-hud': { name: 'Claude HUD', desc: 'Claude heads-up display for real-time status monitoring', icon: '📊', color: '#e84393' },
 }
 
 export default function Plugins() {
   const [tools, setTools] = useState<Record<string, Record<string, unknown>>>({})
-  const [loading, setLoading] = useState(true)
+  const [, setLoading] = useState(true)
 
   useEffect(() => {
     getConfig()
@@ -59,45 +61,18 @@ export default function Plugins() {
       <Row gutter={[16, 16]}>
         {Object.entries(PLUGIN_META).map(([key, meta]) => {
           const pluginConfig = tools[key] ?? {}
-          const enabled = pluginConfig.enabled !== false && Object.keys(pluginConfig).length > 0
+          const enabled = pluginConfig.enabled === true
 
           return (
             <Col xs={24} sm={12} lg={8} key={key}>
-              <Card
-                style={{
-                  border: '1px solid #2a2a4a',
-                  background: enabled
-                    ? `linear-gradient(135deg, ${meta.color}08 0%, transparent 100%)`
-                    : undefined,
-                }}
-              >
-                <Space
-                  style={{ width: '100%', justifyContent: 'space-between' }}
-                  align="start"
-                >
-                  <Space direction="vertical" size={4}>
-                    <Space>
-                      <span style={{ fontSize: 24 }}>{meta.icon}</span>
-                      <Text strong style={{ fontSize: 16 }}>
-                        {meta.name}
-                      </Text>
-                    </Space>
-                    <Text style={{ color: '#9898b8', fontSize: 13 }}>
-                      {meta.desc}
-                    </Text>
-                    <Tag
-                      color={enabled ? 'green' : 'default'}
-                      style={{ borderRadius: 12, fontSize: 11, marginTop: 4 }}
-                    >
-                      {enabled ? 'Active' : 'Inactive'}
-                    </Tag>
-                  </Space>
-                  <Switch
-                    checked={enabled}
-                    onChange={(v) => handleToggle(key, v)}
-                  />
-                </Space>
-              </Card>
+              <PluginCard
+                name={meta.name}
+                description={meta.desc}
+                icon={meta.icon}
+                color={meta.color}
+                enabled={enabled}
+                onToggle={(v) => handleToggle(key, v)}
+              />
             </Col>
           )
         })}

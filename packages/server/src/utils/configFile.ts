@@ -1,32 +1,100 @@
 import { readFile, writeFile, copyFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { homedir } from 'os'
-import { join, dirname } from 'path'
+import { join } from 'path'
 import JSON5 from 'json5'
+import lockfile from 'proper-lockfile'
 
 const CONFIG_DIR = join(homedir(), '.openclaw')
 const CONFIG_PATH = join(CONFIG_DIR, 'openclaw.json')
+const ENV_PATH = join(CONFIG_DIR, '.env')
+
+const VALID_SECTIONS = new Set([
+  'agents', 'channels', 'gateway', 'session', 'messages',
+  'talk', 'tools', 'models', 'skills', 'plugins', 'browser',
+  'ui', 'bindings', 'commands', 'env', 'authProfiles',
+  'hooks', 'cron', 'logging',
+])
 
 const DEFAULT_CONFIG = {
   agents: {
-    model: 'anthropic/claude-sonnet-4-6',
-    fallbacks: [],
-    models: [],
-    concurrency: 4,
+    defaults: {
+      model: { primary: 'anthropic/claude-opus-4-6', fallbacks: [] },
+      models: {},
+      imageMaxDimensionPx: 2048,
+      sandbox: { mode: 'off', scope: 'session' },
+      heartbeat: { every: '5m', target: 'last' },
+      blockStreamingDefault: 'on',
+      typingMode: 'thinking',
+    },
+    list: [],
   },
-  channels: {},
+  channels: {
+    defaults: {
+      groupPolicy: 'allowlist',
+      heartbeat: { showOk: true, showAlerts: true, useIndicator: true },
+    },
+  },
   gateway: {
-    port: 3000,
+    mode: 'local',
+    port: 18789,
     bind: 'loopback',
+    auth: { mode: 'none' },
+    tailscale: { mode: 'off', resetOnExit: false },
   },
   session: {
-    scope: 'channel',
+    scope: 'per-sender',
+    dmScope: 'main',
+    reset: { mode: 'idle', idleMinutes: 30 },
+    threadBindings: { enabled: false },
   },
-  tools: {},
+  messages: {
+    responsePrefix: 'auto',
+    ackReactionScope: 'group-mentions',
+    removeAckAfterReply: true,
+  },
+  tools: {
+    profile: 'full',
+    allow: [],
+    deny: [],
+  },
+  models: {
+    mode: 'merge',
+    providers: {},
+  },
+  skills: {
+    allowBundled: [],
+    entries: {},
+  },
+  plugins: {
+    enabled: true,
+    allow: [],
+    deny: [],
+    entries: {},
+  },
+  browser: {
+    enabled: true,
+    headless: true,
+  },
+  ui: {
+    assistant: { name: 'OpenClaw', avatar: '' },
+  },
+  commands: {
+    native: 'auto',
+    text: true,
+    bash: true,
+    config: true,
+    debug: false,
+    restart: true,
+  },
   env: {},
-  hooks: {},
-  cron: {},
+  cron: { enabled: false, maxConcurrentRuns: 1 },
+  hooks: { enabled: false },
   logging: {},
+}
+
+export function isValidSection(section: string): boolean {
+  return VALID_SECTIONS.has(section)
 }
 
 export async function ensureConfigExists(): Promise<void> {
@@ -47,16 +115,29 @@ export async function readConfig(): Promise<Record<string, unknown>> {
 
 export async function writeConfig(config: Record<string, unknown>): Promise<void> {
   await ensureConfigExists()
-  await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8')
+  const release = await lockfile.lock(CONFIG_PATH, { retries: 3 })
+  try {
+    await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8')
+  } finally {
+    await release()
+  }
 }
 
 export async function updateSection(
   section: string,
   data: Record<string, unknown>,
 ): Promise<void> {
-  const config = await readConfig()
-  config[section] = data
-  await writeConfig(config)
+  await ensureConfigExists()
+  const release = await lockfile.lock(CONFIG_PATH, { retries: 3 })
+  try {
+    const content = await readFile(CONFIG_PATH, 'utf-8')
+    const config = JSON5.parse(content)
+    const existing = (config[section] ?? {}) as Record<string, unknown>
+    config[section] = { ...existing, ...data }
+    await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8')
+  } finally {
+    await release()
+  }
 }
 
 export async function createBackup(): Promise<string> {
@@ -68,6 +149,42 @@ export async function createBackup(): Promise<string> {
   const backupPath = join(backupDir, `openclaw-${timestamp}.json`)
   await copyFile(CONFIG_PATH, backupPath)
   return backupPath
+}
+
+// --- Env file helpers (API keys stored separately with restrictive permissions) ---
+
+export async function readEnvKeys(): Promise<Record<string, string>> {
+  if (!existsSync(ENV_PATH)) return {}
+  const content = await readFile(ENV_PATH, 'utf-8')
+  const result: Record<string, string> = {}
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eqIdx = trimmed.indexOf('=')
+    if (eqIdx === -1) continue
+    const key = trimmed.slice(0, eqIdx).trim()
+    const val = trimmed.slice(eqIdx + 1).trim()
+    result[key] = val
+  }
+  return result
+}
+
+export async function writeEnvKeys(keys: Record<string, string>): Promise<void> {
+  await ensureConfigExists()
+  // Merge with existing keys so partial saves don't erase other keys
+  const existing = await readEnvKeys()
+  const merged = { ...existing }
+  for (const [k, v] of Object.entries(keys)) {
+    if (v) {
+      merged[k] = v
+    }
+    // If value is empty/undefined, remove the key
+    if (!v && k in merged) {
+      delete merged[k]
+    }
+  }
+  const lines = Object.entries(merged).map(([k, v]) => `${k}=${v}`)
+  await writeFile(ENV_PATH, lines.join('\n') + '\n', { encoding: 'utf-8', mode: 0o600 })
 }
 
 export { CONFIG_PATH }

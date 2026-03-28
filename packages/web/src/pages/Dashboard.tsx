@@ -11,11 +11,11 @@ import {
 } from '@ant-design/icons'
 import { getConfig } from '../api/config'
 
-const { Title, Text, Paragraph } = Typography
+const { Title, Text } = Typography
 
 interface ConfigSummary {
-  modelCount: number
   primaryModel: string
+  fallbackCount: number
   channelCount: number
   enabledChannels: number
   pluginCount: number
@@ -23,22 +23,40 @@ interface ConfigSummary {
 
 function parseConfigSummary(config: Record<string, unknown>): ConfigSummary {
   const agents = (config.agents ?? {}) as Record<string, unknown>
+  const defaults = (agents.defaults ?? agents) as Record<string, unknown>
   const channels = (config.channels ?? {}) as Record<string, unknown>
   const tools = (config.tools ?? {}) as Record<string, unknown>
+  const plugins = (config.plugins ?? {}) as Record<string, unknown>
 
-  const channelEntries = Object.entries(channels)
+  // Support both new { primary, fallbacks } and legacy flat format
+  const modelField = defaults.model
+  let primaryModel = 'Not configured'
+  let fallbackCount = 0
+  if (modelField && typeof modelField === 'object') {
+    const m = modelField as Record<string, unknown>
+    primaryModel = (m.primary as string) ?? 'Not configured'
+    fallbackCount = Array.isArray(m.fallbacks) ? m.fallbacks.length : 0
+  } else if (typeof modelField === 'string') {
+    primaryModel = modelField
+    fallbackCount = Array.isArray(defaults.fallbacks) ? defaults.fallbacks.length : 0
+  }
+
+  // Filter out meta keys from channels
+  const channelEntries = Object.entries(channels).filter(
+    ([k]) => k !== 'defaults' && k !== 'modelByChannel',
+  )
   const enabledChannels = channelEntries.filter(
-    ([, v]) => (v as Record<string, unknown>)?.enabled !== false,
+    ([, v]) => (v as Record<string, unknown>)?.enabled === true,
   ).length
 
+  const pluginCount = Object.keys(plugins.entries ?? tools ?? {}).length
+
   return {
-    modelCount: Array.isArray((agents as Record<string, unknown>).models)
-      ? ((agents as Record<string, unknown>).models as unknown[]).length
-      : 0,
-    primaryModel: (agents.model as string) ?? 'Not configured',
+    primaryModel,
+    fallbackCount,
     channelCount: channelEntries.length,
     enabledChannels,
-    pluginCount: Object.keys(tools).length,
+    pluginCount,
   }
 }
 
@@ -57,12 +75,13 @@ export default function Dashboard() {
 
   const statCards = [
     {
-      title: 'AI Models',
-      value: summary?.modelCount ?? 0,
-      subtitle: summary?.primaryModel ?? '-',
+      title: 'Primary Model',
+      value: loading ? '-' : (summary?.primaryModel ?? '-'),
+      subtitle: `${summary?.fallbackCount ?? 0} fallback(s)`,
       icon: <ApiOutlined style={{ fontSize: 24, color: '#6C5CE7' }} />,
       path: '/models',
       gradient: 'linear-gradient(135deg, rgba(108,92,231,0.12) 0%, rgba(108,92,231,0.04) 100%)',
+      isText: true,
     },
     {
       title: 'IM Channels',
@@ -71,6 +90,7 @@ export default function Dashboard() {
       icon: <MessageOutlined style={{ fontSize: 24, color: '#00cec9' }} />,
       path: '/channels',
       gradient: 'linear-gradient(135deg, rgba(0,206,201,0.12) 0%, rgba(0,206,201,0.04) 100%)',
+      isText: false,
     },
     {
       title: 'Plugins',
@@ -79,6 +99,7 @@ export default function Dashboard() {
       icon: <AppstoreOutlined style={{ fontSize: 24, color: '#fdcb6e' }} />,
       path: '/plugins',
       gradient: 'linear-gradient(135deg, rgba(253,203,110,0.12) 0%, rgba(253,203,110,0.04) 100%)',
+      isText: false,
     },
   ]
 
@@ -130,15 +151,29 @@ export default function Dashboard() {
                   <Text style={{ color: '#9898b8', fontSize: 13 }}>
                     {card.title}
                   </Text>
-                  <Statistic
-                    value={loading ? '-' : card.value}
-                    valueStyle={{
-                      fontSize: 36,
+                  {card.isText ? (
+                    <div style={{
+                      fontSize: 18,
                       fontWeight: 700,
                       color: '#e8e8f0',
                       fontFamily: "'Space Grotesk', sans-serif",
-                    }}
-                  />
+                      marginTop: 8,
+                      marginBottom: 8,
+                      wordBreak: 'break-all',
+                    }}>
+                      {card.value}
+                    </div>
+                  ) : (
+                    <Statistic
+                      value={loading ? '-' : card.value}
+                      valueStyle={{
+                        fontSize: 36,
+                        fontWeight: 700,
+                        color: '#e8e8f0',
+                        fontFamily: "'Space Grotesk', sans-serif",
+                      }}
+                    />
+                  )}
                   <Text style={{ color: '#9898b8', fontSize: 12 }}>
                     {card.subtitle}
                   </Text>
@@ -164,7 +199,7 @@ export default function Dashboard() {
             <Space direction="vertical" size={12} style={{ width: '100%' }}>
               {[
                 { label: 'Configure API Keys', desc: 'Set up your LLM provider credentials', path: '/models' },
-                { label: 'Enable IM Channels', desc: 'Connect Telegram, Discord, WeChat and more', path: '/channels' },
+                { label: 'Enable IM Channels', desc: 'Connect Telegram, Discord, WhatsApp, Slack and more', path: '/channels' },
                 { label: 'Manage Plugins', desc: 'Enable browser, cron, webhook and other tools', path: '/plugins' },
               ].map((action) => (
                 <div
@@ -229,6 +264,18 @@ export default function Dashboard() {
                   style={{ fontSize: 12, marginTop: 4, display: 'inline-block' }}
                 >
                   ~/.openclaw/openclaw.json
+                </Text>
+              </div>
+              <div>
+                <Text style={{ color: '#9898b8', fontSize: 12 }}>
+                  Gateway
+                </Text>
+                <br />
+                <Text
+                  code
+                  style={{ fontSize: 12, marginTop: 4, display: 'inline-block' }}
+                >
+                  ws://127.0.0.1:18789
                 </Text>
               </div>
               <Button

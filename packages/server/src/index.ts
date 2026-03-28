@@ -6,8 +6,8 @@ import { ensureConfigExists, CONFIG_PATH } from './utils/configFile.js'
 const app = express()
 const PORT = 3210
 
-app.use(cors())
-app.use(express.json())
+app.use(cors({ origin: 'http://localhost:5173' }))
+app.use(express.json({ limit: '1mb' }))
 app.use('/api', configRouter)
 
 async function start() {
