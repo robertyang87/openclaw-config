@@ -1,48 +1,144 @@
 import { useEffect, useState } from 'react'
-import { Row, Col, Typography, Space, message } from 'antd'
-import { AppstoreOutlined } from '@ant-design/icons'
-import { getConfig, updateConfigSection } from '../api/config'
-import PluginCard from '../components/PluginCard'
+import {
+  Row,
+  Col,
+  Typography,
+  Space,
+  message,
+  Card,
+  Form,
+  Select,
+  Switch,
+  InputNumber,
+  Button,
+  Divider,
+  Tag,
+} from 'antd'
+import { AppstoreOutlined, SaveOutlined } from '@ant-design/icons'
+import { getConfig, updateConfig } from '../api/config'
 
 const { Title, Text } = Typography
 
-const PLUGIN_META: Record<string, { name: string; desc: string; icon: string; color: string }> = {
-  browser: { name: 'Browser', desc: 'Web browsing and page automation', icon: '🌐', color: '#0984e3' },
-  cron: { name: 'Cron Scheduler', desc: 'Schedule recurring tasks', icon: '⏰', color: '#6C5CE7' },
-  hooks: { name: 'Webhooks', desc: 'HTTP webhook integrations', icon: '🔗', color: '#00cec9' },
-  memory: { name: 'Memory', desc: 'Long-term memory and context recall', icon: '🧠', color: '#e17055' },
-  skills: { name: 'Skills', desc: 'Custom skill scripts and workflows', icon: '⚡', color: '#fdcb6e' },
-  voice: { name: 'Voice', desc: 'Voice input and TTS output', icon: '🎤', color: '#a29bfe' },
-  'claude-hud': { name: 'Claude HUD', desc: 'Claude heads-up display for real-time status monitoring', icon: '📊', color: '#e84393' },
-}
+const TOOL_GROUPS = [
+  { key: 'group:runtime', name: 'Runtime', desc: 'Shell execution and background processes' },
+  { key: 'group:fs', name: 'Filesystem', desc: 'Read, write, edit, and apply patches to files' },
+  { key: 'group:web', name: 'Web', desc: 'Web search and page fetching' },
+  { key: 'group:sessions', name: 'Sessions', desc: 'Session management and sub-agents' },
+  { key: 'group:memory', name: 'Memory', desc: 'Long-term memory search and recall' },
+  { key: 'group:ui', name: 'Canvas / UI', desc: 'Node Canvas (present, eval, snapshot)' },
+  { key: 'group:automation', name: 'Automation', desc: 'Cron jobs and gateway control' },
+  { key: 'group:messaging', name: 'Messaging', desc: 'Send messages across channels' },
+  { key: 'group:nodes', name: 'Nodes', desc: 'Discover and target paired devices' },
+  { key: 'group:openclaw', name: 'OpenClaw', desc: 'Internal OpenClaw management tools' },
+]
 
 export default function Plugins() {
-  const [tools, setTools] = useState<Record<string, Record<string, unknown>>>({})
-  const [, setLoading] = useState(true)
+  const [config, setConfig] = useState<Record<string, unknown>>({})
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [form] = Form.useForm()
 
   useEffect(() => {
     getConfig()
       .then((cfg) => {
-        const t = {} as Record<string, Record<string, unknown>>
-        for (const key of Object.keys(PLUGIN_META)) {
-          t[key] = ((cfg.tools ?? cfg) as Record<string, unknown>)[key] as Record<string, unknown> ?? {}
-        }
-        setTools(t)
-      })
-      .catch(() => message.error('Failed to load plugins'))
-      .finally(() => setLoading(false))
-  }, [])
+        setConfig(cfg)
+        const tools = (cfg.tools ?? {}) as Record<string, unknown>
+        const browser = (cfg.browser ?? {}) as Record<string, unknown>
+        const skills = (cfg.skills ?? {}) as Record<string, unknown>
+        const cron = (cfg.cron ?? {}) as Record<string, unknown>
+        const hooks = (cfg.hooks ?? {}) as Record<string, unknown>
+        const web = (tools.web ?? {}) as Record<string, unknown>
+        const exec = (tools.exec ?? {}) as Record<string, unknown>
+        const media = (tools.media ?? {}) as Record<string, unknown>
+        const agentToAgent = (tools.agentToAgent ?? {}) as Record<string, unknown>
 
-  const handleToggle = async (key: string, enabled: boolean) => {
-    const updated = { ...tools, [key]: { ...tools[key], enabled } }
-    setTools(updated)
+        form.setFieldsValue({
+          toolProfile: tools.profile ?? 'full',
+          toolAllow: tools.allow ?? [],
+          toolDeny: tools.deny ?? [],
+
+          browserEnabled: browser.enabled !== false,
+          browserHeadless: browser.headless !== false,
+
+          webEnabled: web.enabled !== false,
+          execTimeoutSec: exec.timeoutSec ?? 120,
+
+          mediaEnabled: media.enabled !== false,
+          agentToAgentEnabled: agentToAgent.enabled !== false,
+
+          cronEnabled: cron.enabled !== false,
+          cronMaxConcurrent: cron.maxConcurrentRuns ?? 1,
+
+          hooksEnabled: hooks.enabled !== false,
+
+          skillsAllowBundled: skills.allowBundled ?? [],
+        })
+      })
+      .catch(() => message.error('Failed to load config'))
+      .finally(() => setLoading(false))
+  }, [form])
+
+  const handleSave = async () => {
     try {
-      await updateConfigSection('tools', updated)
-      message.success(`${PLUGIN_META[key].name} ${enabled ? 'enabled' : 'disabled'}`)
+      setSaving(true)
+      const v = form.getFieldsValue()
+      const updated = {
+        ...config,
+        tools: {
+          ...(config.tools as Record<string, unknown>),
+          profile: v.toolProfile,
+          allow: v.toolAllow?.length ? v.toolAllow : [],
+          deny: v.toolDeny?.length ? v.toolDeny : [],
+          web: {
+            ...((config.tools as Record<string, unknown>)?.web as Record<string, unknown>),
+            enabled: v.webEnabled,
+          },
+          exec: {
+            ...((config.tools as Record<string, unknown>)?.exec as Record<string, unknown>),
+            timeoutSec: v.execTimeoutSec,
+          },
+          media: {
+            ...((config.tools as Record<string, unknown>)?.media as Record<string, unknown>),
+            enabled: v.mediaEnabled,
+          },
+          agentToAgent: {
+            ...((config.tools as Record<string, unknown>)?.agentToAgent as Record<string, unknown>),
+            enabled: v.agentToAgentEnabled,
+          },
+        },
+        browser: {
+          ...(config.browser as Record<string, unknown>),
+          enabled: v.browserEnabled,
+          headless: v.browserHeadless,
+        },
+        cron: {
+          ...(config.cron as Record<string, unknown>),
+          enabled: v.cronEnabled,
+          maxConcurrentRuns: v.cronMaxConcurrent,
+        },
+        hooks: {
+          ...(config.hooks as Record<string, unknown>),
+          enabled: v.hooksEnabled,
+        },
+        skills: {
+          ...(config.skills as Record<string, unknown>),
+          allowBundled: v.skillsAllowBundled ?? [],
+        },
+      }
+      await updateConfig(updated)
+      setConfig(updated)
+      message.success('Tools & plugins configuration saved')
     } catch {
-      message.error('Failed to update')
+      message.error('Failed to save')
+    } finally {
+      setSaving(false)
     }
   }
+
+  const toolGroupOptions = TOOL_GROUPS.map((g) => ({
+    label: `${g.key} — ${g.name}`,
+    value: g.key,
+  }))
 
   return (
     <div>
@@ -50,33 +146,117 @@ export default function Plugins() {
         <Space align="center">
           <AppstoreOutlined style={{ fontSize: 28, color: '#fdcb6e' }} />
           <Title level={2} style={{ margin: 0, letterSpacing: '-0.5px' }}>
-            Plugins & Tools
+            Tools & Plugins
           </Title>
         </Space>
         <Text style={{ color: '#9898b8' }}>
-          Enable and configure OpenClaw capabilities
+          Configure agent tool access, browser, cron, hooks, and skills
         </Text>
       </Space>
 
-      <Row gutter={[16, 16]}>
-        {Object.entries(PLUGIN_META).map(([key, meta]) => {
-          const pluginConfig = tools[key] ?? {}
-          const enabled = pluginConfig.enabled === true
+      <Form form={form} layout="vertical" onFinish={handleSave}>
+        <Row gutter={[20, 20]}>
+          <Col xs={24} md={12}>
+            <Card title="Tool Access Control" style={{ border: '1px solid #2a2a4a' }}>
+              <Form.Item name="toolProfile" label="Tool Profile">
+                <Select options={[
+                  { label: 'Full (all tools enabled)', value: 'full' },
+                  { label: 'Coding (filesystem + runtime)', value: 'coding' },
+                  { label: 'Messaging (channels + web)', value: 'messaging' },
+                  { label: 'Minimal (read-only)', value: 'minimal' },
+                ]} />
+              </Form.Item>
+              <Form.Item name="toolAllow" label="Allow (whitelist specific tools/groups)">
+                <Select mode="tags" placeholder="e.g. group:web, group:fs" options={toolGroupOptions} />
+              </Form.Item>
+              <Form.Item name="toolDeny" label="Deny (blacklist specific tools/groups)">
+                <Select mode="tags" placeholder="e.g. group:runtime" options={toolGroupOptions} />
+              </Form.Item>
 
-          return (
-            <Col xs={24} sm={12} lg={8} key={key}>
-              <PluginCard
-                name={meta.name}
-                description={meta.desc}
-                icon={meta.icon}
-                color={meta.color}
-                enabled={enabled}
-                onToggle={(v) => handleToggle(key, v)}
-              />
-            </Col>
-          )
-        })}
-      </Row>
+              <Divider style={{ borderColor: '#2a2a4a' }} />
+              <Text style={{ color: '#9898b8', fontSize: 12 }}>
+                Available tool groups:
+              </Text>
+              <div style={{ marginTop: 8 }}>
+                {TOOL_GROUPS.map((g) => (
+                  <Tag key={g.key} style={{ marginBottom: 6, borderRadius: 8, fontSize: 11 }}>
+                    {g.key} — {g.desc}
+                  </Tag>
+                ))}
+              </div>
+            </Card>
+
+            <Card title="Skills" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="skillsAllowBundled" label="Allowed Bundled Skills">
+                <Select mode="tags" placeholder="Leave empty to allow all bundled skills" />
+              </Form.Item>
+            </Card>
+          </Col>
+
+          <Col xs={24} md={12}>
+            <Card title="Browser" style={{ border: '1px solid #2a2a4a' }}>
+              <Form.Item name="browserEnabled" label="Enabled" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+              <Form.Item name="browserHeadless" label="Headless Mode" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+            </Card>
+
+            <Card title="Web Tools" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="webEnabled" label="Web Search & Fetch" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+            </Card>
+
+            <Card title="Shell Execution" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="execTimeoutSec" label="Timeout (seconds)">
+                <InputNumber min={1} max={3600} style={{ width: '100%' }} />
+              </Form.Item>
+            </Card>
+
+            <Card title="Media" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="mediaEnabled" label="Audio / Video Understanding" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+            </Card>
+
+            <Card title="Agent-to-Agent" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="agentToAgentEnabled" label="Inter-agent Communication" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+            </Card>
+
+            <Card title="Cron" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="cronEnabled" label="Enabled" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+              <Form.Item name="cronMaxConcurrent" label="Max Concurrent Runs">
+                <InputNumber min={1} max={10} style={{ width: '100%' }} />
+              </Form.Item>
+            </Card>
+
+            <Card title="Hooks" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="hooksEnabled" label="Event Hooks System" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+            </Card>
+          </Col>
+        </Row>
+
+        <div style={{ marginTop: 24, textAlign: 'right' }}>
+          <Button
+            type="primary"
+            icon={<SaveOutlined />}
+            htmlType="submit"
+            loading={saving}
+            size="large"
+            style={{ borderRadius: 10, paddingInline: 32 }}
+          >
+            Save Changes
+          </Button>
+        </div>
+      </Form>
     </div>
   )
 }

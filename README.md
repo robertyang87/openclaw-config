@@ -19,8 +19,8 @@ Manage your OpenClaw configuration through a modern web UI instead of manually e
 ### IM Channels
 ![IM Channels](docs/screenshots/channels.png)
 
-### Plugins
-![Plugins](docs/screenshots/plugins.png)
+### Tools & Plugins
+![Tools & Plugins](docs/screenshots/plugins.png)
 
 ### Advanced Settings
 ![Advanced Settings](docs/screenshots/advanced.png)
@@ -31,8 +31,8 @@ Manage your OpenClaw configuration through a modern web UI instead of manually e
 - **Models & API Keys** — 31 LLM providers (Anthropic, OpenAI, Google, DeepSeek, Mistral, xAI, Groq, MiniMax, and more) with secure `.env` storage
 - **IM Channels** — 9 built-in messaging platforms aligned with OpenClaw official docs
   - WhatsApp, Telegram, Discord, Slack, Signal, iMessage (BlueBubbles), iMessage (Legacy), Google Chat, IRC
-- **Plugins** — Enable/disable tools (browser automation, cron, webhooks, memory, skills, voice, Claude HUD)
-- **Advanced Settings** — Gateway, session, sandbox, Tailscale, and agent defaults with one-click backup
+- **Tools & Plugins** — Tool access control (profiles, allow/deny), browser, web, shell exec, media, cron, hooks, and skills
+- **Advanced Settings** — Gateway, session, messages, chat commands, sandbox, Tailscale, UI, and agent defaults with one-click backup
 - **Dark Theme** — Modern, polished dark UI built with Ant Design
 
 ## Quick Start

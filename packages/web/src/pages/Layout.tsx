@@ -17,7 +17,7 @@ const menuItems = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
   { key: '/models', icon: <ApiOutlined />, label: 'Models & Keys' },
   { key: '/channels', icon: <MessageOutlined />, label: 'IM Channels' },
-  { key: '/plugins', icon: <AppstoreOutlined />, label: 'Plugins' },
+  { key: '/plugins', icon: <AppstoreOutlined />, label: 'Tools & Plugins' },
   { key: '/advanced', icon: <SettingOutlined />, label: 'Advanced' },
 ]
 
