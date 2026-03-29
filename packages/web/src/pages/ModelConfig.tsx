@@ -213,21 +213,23 @@ export default function ModelConfig() {
     try {
       setSaving(true)
       const values = form.getFieldsValue()
-      await updateConfigSection('agents', {
-        defaults: {
-          model: {
-            primary: values.primary,
-            fallbacks: values.fallbacks ?? [],
-          },
-        },
-      })
       const envData: Record<string, string> = {}
       for (const p of PROVIDERS) {
         if (p.envKey) {
           envData[p.envKey] = values[`${p.key}Key`] ?? ''
         }
       }
-      await updateConfigSection('env', envData)
+      await Promise.all([
+        updateConfigSection('agents', {
+          defaults: {
+            model: {
+              primary: values.primary,
+              fallbacks: values.fallbacks ?? [],
+            },
+          },
+        }),
+        updateConfigSection('env', envData),
+      ])
       message.success('Model configuration saved')
     } catch {
       message.error('Failed to save')

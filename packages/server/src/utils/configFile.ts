@@ -123,6 +123,30 @@ export async function writeConfig(config: Record<string, unknown>): Promise<void
   }
 }
 
+function deepMerge(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>,
+): Record<string, unknown> {
+  const result = { ...target }
+  for (const key of Object.keys(source)) {
+    const tVal = target[key]
+    const sVal = source[key]
+    if (
+      tVal && sVal &&
+      typeof tVal === 'object' && !Array.isArray(tVal) &&
+      typeof sVal === 'object' && !Array.isArray(sVal)
+    ) {
+      result[key] = deepMerge(
+        tVal as Record<string, unknown>,
+        sVal as Record<string, unknown>,
+      )
+    } else {
+      result[key] = sVal
+    }
+  }
+  return result
+}
+
 export async function updateSection(
   section: string,
   data: Record<string, unknown>,
@@ -133,7 +157,7 @@ export async function updateSection(
     const content = await readFile(CONFIG_PATH, 'utf-8')
     const config = JSON5.parse(content)
     const existing = (config[section] ?? {}) as Record<string, unknown>
-    config[section] = { ...existing, ...data }
+    config[section] = deepMerge(existing, data)
     await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8')
   } finally {
     await release()
@@ -163,7 +187,11 @@ export async function readEnvKeys(): Promise<Record<string, string>> {
     const eqIdx = trimmed.indexOf('=')
     if (eqIdx === -1) continue
     const key = trimmed.slice(0, eqIdx).trim()
-    const val = trimmed.slice(eqIdx + 1).trim()
+    let val = trimmed.slice(eqIdx + 1).trim()
+    // Strip surrounding quotes (single or double)
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1)
+    }
     result[key] = val
   }
   return result
@@ -171,20 +199,26 @@ export async function readEnvKeys(): Promise<Record<string, string>> {
 
 export async function writeEnvKeys(keys: Record<string, string>): Promise<void> {
   await ensureConfigExists()
-  // Merge with existing keys so partial saves don't erase other keys
-  const existing = await readEnvKeys()
-  const merged = { ...existing }
-  for (const [k, v] of Object.entries(keys)) {
-    if (v) {
-      merged[k] = v
+  // Use CONFIG_PATH as lockfile anchor (ENV_PATH may not exist yet)
+  const release = await lockfile.lock(CONFIG_PATH, { retries: 3 })
+  try {
+    // Merge with existing keys so partial saves don't erase other keys
+    const existing = await readEnvKeys()
+    const merged = { ...existing }
+    for (const [k, v] of Object.entries(keys)) {
+      if (v) {
+        merged[k] = v
+      }
+      // If value is empty/undefined, remove the key
+      if (!v && k in merged) {
+        delete merged[k]
+      }
     }
-    // If value is empty/undefined, remove the key
-    if (!v && k in merged) {
-      delete merged[k]
-    }
+    const lines = Object.entries(merged).map(([k, v]) => `${k}=${v}`)
+    await writeFile(ENV_PATH, lines.join('\n') + '\n', { encoding: 'utf-8', mode: 0o600 })
+  } finally {
+    await release()
   }
-  const lines = Object.entries(merged).map(([k, v]) => `${k}=${v}`)
-  await writeFile(ENV_PATH, lines.join('\n') + '\n', { encoding: 'utf-8', mode: 0o600 })
 }
 
 export { CONFIG_PATH }

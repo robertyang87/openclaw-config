@@ -14,12 +14,11 @@ import {
   Switch,
 } from 'antd'
 import { SettingOutlined, SaveOutlined } from '@ant-design/icons'
-import { getConfig, updateConfig, backupConfig } from '../api/config'
+import { getConfig, updateConfigSection, backupConfig } from '../api/config'
 
 const { Title, Text } = Typography
 
 export default function Advanced() {
-  const [config, setConfig] = useState<Record<string, unknown>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [form] = Form.useForm()
@@ -27,7 +26,6 @@ export default function Advanced() {
   useEffect(() => {
     getConfig()
       .then((cfg) => {
-        setConfig(cfg)
         const gw = (cfg.gateway ?? {}) as Record<string, unknown>
         const session = (cfg.session ?? {}) as Record<string, unknown>
         const agents = (cfg.agents ?? {}) as Record<string, unknown>
@@ -89,73 +87,49 @@ export default function Advanced() {
     try {
       setSaving(true)
       const v = form.getFieldsValue()
-      const updated = {
-        ...config,
-        gateway: {
-          ...(config.gateway as Record<string, unknown>),
+      await Promise.all([
+        updateConfigSection('gateway', {
           mode: v.gatewayMode,
           port: v.port,
           bind: v.bind,
-          auth: {
-            ...((config.gateway as Record<string, unknown>)?.auth as Record<string, unknown>),
-            mode: v.authMode,
-          },
-          tailscale: {
-            ...((config.gateway as Record<string, unknown>)?.tailscale as Record<string, unknown>),
-            mode: v.tailscaleMode,
-            resetOnExit: v.tailscaleResetOnExit,
-          },
-        },
-        session: {
-          ...(config.session as Record<string, unknown>),
+          auth: { mode: v.authMode },
+          tailscale: { mode: v.tailscaleMode, resetOnExit: v.tailscaleResetOnExit },
+        }),
+        updateConfigSection('session', {
           scope: v.sessionScope,
           dmScope: v.dmScope,
           reset: {
-            ...((config.session as Record<string, unknown>)?.reset as Record<string, unknown>),
             mode: v.resetMode,
             idleMinutes: v.idleMinutes,
             ...(v.resetAtHour != null ? { atHour: v.resetAtHour } : {}),
           },
-          threadBindings: {
-            ...((config.session as Record<string, unknown>)?.threadBindings as Record<string, unknown>),
-            enabled: v.threadBindingsEnabled,
-          },
-        },
-        agents: {
-          ...(config.agents as Record<string, unknown>),
+          threadBindings: { enabled: v.threadBindingsEnabled },
+        }),
+        updateConfigSection('agents', {
           defaults: {
-            ...((config.agents as Record<string, unknown>)?.defaults as Record<string, unknown>),
             sandbox: { mode: v.sandboxMode, scope: v.sandboxScope },
             typingMode: v.typingMode,
             blockStreamingDefault: v.blockStreaming,
             imageMaxDimensionPx: v.imageMaxDimensionPx,
             ...(v.userTimezone ? { userTimezone: v.userTimezone } : {}),
           },
-        },
-        messages: {
-          ...(config.messages as Record<string, unknown>),
+        }),
+        updateConfigSection('messages', {
           responsePrefix: v.responsePrefix,
           ackReactionScope: v.ackReactionScope,
           removeAckAfterReply: v.removeAckAfterReply,
-        },
-        commands: {
-          ...(config.commands as Record<string, unknown>),
+        }),
+        updateConfigSection('commands', {
           native: v.commandsNative,
           text: v.commandsText,
           bash: v.commandsBash,
           config: v.commandsConfig,
           restart: v.commandsRestart,
-        },
-        ui: {
-          ...(config.ui as Record<string, unknown>),
-          assistant: {
-            ...((config.ui as Record<string, unknown>)?.assistant as Record<string, unknown>),
-            name: v.assistantName,
-          },
-        },
-      }
-      await updateConfig(updated)
-      setConfig(updated)
+        }),
+        updateConfigSection('ui', {
+          assistant: { name: v.assistantName },
+        }),
+      ])
       message.success('Advanced settings saved')
     } catch {
       message.error('Failed to save')
@@ -248,11 +222,18 @@ export default function Advanced() {
                   { label: 'Daily', value: 'daily' },
                 ]} />
               </Form.Item>
-              <Form.Item name="idleMinutes" label="Idle Minutes">
-                <InputNumber min={1} max={1440} style={{ width: '100%' }} />
-              </Form.Item>
-              <Form.Item name="resetAtHour" label="Daily Reset Hour (0-23)">
-                <InputNumber min={0} max={23} style={{ width: '100%' }} placeholder="Only used in daily mode" />
+              <Form.Item noStyle shouldUpdate={(prev, cur) => prev.resetMode !== cur.resetMode}>
+                {({ getFieldValue }) =>
+                  getFieldValue('resetMode') === 'idle' ? (
+                    <Form.Item name="idleMinutes" label="Idle Minutes">
+                      <InputNumber min={1} max={1440} style={{ width: '100%' }} />
+                    </Form.Item>
+                  ) : (
+                    <Form.Item name="resetAtHour" label="Daily Reset Hour (0-23)">
+                      <InputNumber min={0} max={23} style={{ width: '100%' }} />
+                    </Form.Item>
+                  )
+                }
               </Form.Item>
               <Form.Item name="threadBindingsEnabled" label="Thread Bindings" valuePropName="checked">
                 <Switch />

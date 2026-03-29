@@ -31,7 +31,9 @@ router.put('/config', async (req, res) => {
       res.status(400).json({ error: 'Request body must be a JSON object' })
       return
     }
-    await writeConfig(req.body)
+    // Strip env keys from the body to prevent API secrets leaking into openclaw.json
+    const { env: _env, ...safeBody } = req.body as Record<string, unknown>
+    await writeConfig(safeBody)
     res.json({ success: true })
   } catch (err) {
     res.status(500).json({ error: 'Failed to write config', detail: String(err) })

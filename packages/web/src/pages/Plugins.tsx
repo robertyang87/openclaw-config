@@ -15,7 +15,7 @@ import {
   Tag,
 } from 'antd'
 import { AppstoreOutlined, SaveOutlined } from '@ant-design/icons'
-import { getConfig, updateConfig } from '../api/config'
+import { getConfig, updateConfigSection } from '../api/config'
 
 const { Title, Text } = Typography
 
@@ -33,7 +33,6 @@ const TOOL_GROUPS = [
 ]
 
 export default function Plugins() {
-  const [config, setConfig] = useState<Record<string, unknown>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [form] = Form.useForm()
@@ -41,7 +40,6 @@ export default function Plugins() {
   useEffect(() => {
     getConfig()
       .then((cfg) => {
-        setConfig(cfg)
         const tools = (cfg.tools ?? {}) as Record<string, unknown>
         const browser = (cfg.browser ?? {}) as Record<string, unknown>
         const skills = (cfg.skills ?? {}) as Record<string, unknown>
@@ -82,51 +80,31 @@ export default function Plugins() {
     try {
       setSaving(true)
       const v = form.getFieldsValue()
-      const updated = {
-        ...config,
-        tools: {
-          ...(config.tools as Record<string, unknown>),
+      await Promise.all([
+        updateConfigSection('tools', {
           profile: v.toolProfile,
           allow: v.toolAllow?.length ? v.toolAllow : [],
           deny: v.toolDeny?.length ? v.toolDeny : [],
-          web: {
-            ...((config.tools as Record<string, unknown>)?.web as Record<string, unknown>),
-            enabled: v.webEnabled,
-          },
-          exec: {
-            ...((config.tools as Record<string, unknown>)?.exec as Record<string, unknown>),
-            timeoutSec: v.execTimeoutSec,
-          },
-          media: {
-            ...((config.tools as Record<string, unknown>)?.media as Record<string, unknown>),
-            enabled: v.mediaEnabled,
-          },
-          agentToAgent: {
-            ...((config.tools as Record<string, unknown>)?.agentToAgent as Record<string, unknown>),
-            enabled: v.agentToAgentEnabled,
-          },
-        },
-        browser: {
-          ...(config.browser as Record<string, unknown>),
+          web: { enabled: v.webEnabled },
+          exec: { timeoutSec: v.execTimeoutSec },
+          media: { enabled: v.mediaEnabled },
+          agentToAgent: { enabled: v.agentToAgentEnabled },
+        }),
+        updateConfigSection('browser', {
           enabled: v.browserEnabled,
           headless: v.browserHeadless,
-        },
-        cron: {
-          ...(config.cron as Record<string, unknown>),
+        }),
+        updateConfigSection('cron', {
           enabled: v.cronEnabled,
           maxConcurrentRuns: v.cronMaxConcurrent,
-        },
-        hooks: {
-          ...(config.hooks as Record<string, unknown>),
+        }),
+        updateConfigSection('hooks', {
           enabled: v.hooksEnabled,
-        },
-        skills: {
-          ...(config.skills as Record<string, unknown>),
+        }),
+        updateConfigSection('skills', {
           allowBundled: v.skillsAllowBundled ?? [],
-        },
-      }
-      await updateConfig(updated)
-      setConfig(updated)
+        }),
+      ])
       message.success('Tools & plugins configuration saved')
     } catch {
       message.error('Failed to save')
