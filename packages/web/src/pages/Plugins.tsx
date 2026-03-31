@@ -7,6 +7,7 @@ import {
   message,
   Card,
   Form,
+  Input,
   Select,
   Switch,
   InputNumber,
@@ -15,7 +16,7 @@ import {
   Tag,
 } from 'antd'
 import { AppstoreOutlined, SaveOutlined } from '@ant-design/icons'
-import { getConfig, updateConfigSections } from '../api/config'
+import { getConfig, updateConfigSections, updateConfigSection } from '../api/config'
 
 const { Title, Text } = Typography
 
@@ -32,9 +33,16 @@ const TOOL_GROUPS = [
   { key: 'group:openclaw', name: 'OpenClaw', desc: 'Internal OpenClaw management tools' },
 ]
 
+interface McpServer {
+  command: string
+  args?: string[]
+  env?: Record<string, string>
+}
+
 export default function Plugins() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [mcpServers, setMcpServers] = useState<Record<string, McpServer>>({})
   const [form] = Form.useForm()
 
   useEffect(() => {
@@ -46,23 +54,39 @@ export default function Plugins() {
         const cron = (cfg.cron ?? {}) as Record<string, unknown>
         const hooks = (cfg.hooks ?? {}) as Record<string, unknown>
         const web = (tools.web ?? {}) as Record<string, unknown>
+        const webSearch = (web.search ?? {}) as Record<string, unknown>
+        const webFetch = (web.fetch ?? {}) as Record<string, unknown>
         const exec = (tools.exec ?? {}) as Record<string, unknown>
         const media = (tools.media ?? {}) as Record<string, unknown>
         const agentToAgent = (tools.agentToAgent ?? {}) as Record<string, unknown>
+        const fs = (tools.fs ?? {}) as Record<string, unknown>
+        const loopDetection = (tools.loopDetection ?? {}) as Record<string, unknown>
+        const sandbox = (tools.sandbox ?? {}) as Record<string, unknown>
+        const links = (tools.links ?? {}) as Record<string, unknown>
+        const mcp = (cfg.mcp ?? {}) as Record<string, unknown>
+        setMcpServers((mcp.servers ?? {}) as Record<string, McpServer>)
 
         form.setFieldsValue({
           toolProfile: tools.profile ?? 'full',
           toolAllow: tools.allow ?? [],
+          toolAlsoAllow: tools.alsoAllow ?? [],
           toolDeny: tools.deny ?? [],
 
           browserEnabled: browser.enabled !== false,
           browserHeadless: browser.headless !== false,
 
-          webEnabled: web.enabled !== false,
+          webSearchEnabled: webSearch.enabled !== false,
+          webFetchEnabled: webFetch.enabled !== false,
           execTimeoutSec: exec.timeoutSec ?? 120,
+          execAskMode: exec.askMode,
 
           mediaEnabled: media.enabled !== false,
           agentToAgentEnabled: agentToAgent.enabled !== false,
+          linksEnabled: links.enabled !== false,
+
+          fsPathGuards: fs.pathGuards ?? [],
+          loopDetectionEnabled: loopDetection.enabled !== false,
+          sandboxMode: sandbox.mode ?? 'off',
 
           cronEnabled: cron.enabled !== false,
           cronMaxConcurrent: cron.maxConcurrentRuns ?? 1,
@@ -84,11 +108,21 @@ export default function Plugins() {
         { section: 'tools', data: {
           profile: v.toolProfile,
           allow: v.toolAllow?.length ? v.toolAllow : [],
+          alsoAllow: v.toolAlsoAllow?.length ? v.toolAlsoAllow : [],
           deny: v.toolDeny?.length ? v.toolDeny : [],
-          web: { enabled: v.webEnabled },
-          exec: { timeoutSec: v.execTimeoutSec },
+          web: {
+            search: { enabled: v.webSearchEnabled },
+            fetch: { enabled: v.webFetchEnabled },
+          },
+          exec: {
+            timeoutSec: v.execTimeoutSec,
+            ...(v.execAskMode ? { askMode: v.execAskMode } : { askMode: null }),
+          },
           media: { enabled: v.mediaEnabled },
           agentToAgent: { enabled: v.agentToAgentEnabled },
+          links: { enabled: v.linksEnabled },
+          loopDetection: { enabled: v.loopDetectionEnabled },
+          ...(v.sandboxMode !== 'off' ? { sandbox: { mode: v.sandboxMode } } : {}),
         }},
         { section: 'browser', data: {
           enabled: v.browserEnabled,
@@ -147,6 +181,9 @@ export default function Plugins() {
               <Form.Item name="toolAllow" label="Allow (whitelist specific tools/groups)">
                 <Select mode="tags" placeholder="e.g. group:web, group:fs" options={toolGroupOptions} />
               </Form.Item>
+              <Form.Item name="toolAlsoAllow" label="Also Allow (additive to profile)">
+                <Select mode="tags" placeholder="e.g. group:messaging" options={toolGroupOptions} />
+              </Form.Item>
               <Form.Item name="toolDeny" label="Deny (blacklist specific tools/groups)">
                 <Select mode="tags" placeholder="e.g. group:runtime" options={toolGroupOptions} />
               </Form.Item>
@@ -169,6 +206,42 @@ export default function Plugins() {
                 <Select mode="tags" placeholder="Leave empty to allow all bundled skills" />
               </Form.Item>
             </Card>
+
+            <Card
+              title="MCP Servers"
+              style={{ border: '1px solid #2a2a4a', marginTop: 20 }}
+              extra={
+                <Tag color="purple" style={{ borderRadius: 12, fontSize: 11 }}>
+                  {Object.keys(mcpServers).length} configured
+                </Tag>
+              }
+            >
+              {Object.keys(mcpServers).length === 0 ? (
+                <Text style={{ color: '#9898b8', fontSize: 12 }}>
+                  No MCP servers configured. Add servers to openclaw.json under mcp.servers.
+                </Text>
+              ) : (
+                <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                  {Object.entries(mcpServers).map(([name, server]) => (
+                    <div
+                      key={name}
+                      style={{
+                        padding: '10px 14px',
+                        background: 'rgba(108, 92, 231, 0.04)',
+                        border: '1px solid #2a2a4a',
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text strong style={{ fontSize: 13 }}>{name}</Text>
+                      <br />
+                      <Text code style={{ fontSize: 11 }}>
+                        {server.command}{server.args?.length ? ' ' + server.args.join(' ') : ''}
+                      </Text>
+                    </div>
+                  ))}
+                </Space>
+              )}
+            </Card>
           </Col>
 
           <Col xs={24} md={12}>
@@ -182,7 +255,13 @@ export default function Plugins() {
             </Card>
 
             <Card title="Web Tools" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
-              <Form.Item name="webEnabled" label="Web Search & Fetch" valuePropName="checked">
+              <Form.Item name="webSearchEnabled" label="Web Search" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+              <Form.Item name="webFetchEnabled" label="Web Fetch" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+              <Form.Item name="linksEnabled" label="Link Understanding" valuePropName="checked">
                 <Switch />
               </Form.Item>
             </Card>
@@ -191,17 +270,34 @@ export default function Plugins() {
               <Form.Item name="execTimeoutSec" label="Timeout (seconds)">
                 <InputNumber min={1} max={3600} style={{ width: '100%' }} />
               </Form.Item>
+              <Form.Item name="execAskMode" label="Ask Mode">
+                <Select allowClear placeholder="Default (auto)" options={[
+                  { label: 'Always ask', value: 'always' },
+                  { label: 'Auto', value: 'auto' },
+                  { label: 'Never', value: 'never' },
+                ]} />
+              </Form.Item>
             </Card>
 
-            <Card title="Media" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+            <Card title="Media & Agent" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
               <Form.Item name="mediaEnabled" label="Audio / Video Understanding" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+              <Form.Item name="agentToAgentEnabled" label="Inter-agent Communication" valuePropName="checked">
                 <Switch />
               </Form.Item>
             </Card>
 
-            <Card title="Agent-to-Agent" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
-              <Form.Item name="agentToAgentEnabled" label="Inter-agent Communication" valuePropName="checked">
+            <Card title="Safety" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="loopDetectionEnabled" label="Tool Loop Detection" valuePropName="checked">
                 <Switch />
+              </Form.Item>
+              <Form.Item name="sandboxMode" label="Sandbox Mode">
+                <Select options={[
+                  { label: 'Off', value: 'off' },
+                  { label: 'Non-main sessions', value: 'non-main' },
+                  { label: 'All sessions', value: 'all' },
+                ]} />
               </Form.Item>
             </Card>
 

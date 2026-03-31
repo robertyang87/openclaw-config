@@ -23,8 +23,13 @@ import {
   SiSignal,
   SiImessage,
   SiGooglechat,
+  SiMatrix,
+  SiMattermost,
+  SiTwitch,
+  SiLine,
+  SiNextcloud,
 } from 'react-icons/si'
-import { TbHash } from 'react-icons/tb'
+import { TbHash, TbMessageCircle, TbBriefcase } from 'react-icons/tb'
 import { getConfig, updateConfigSection } from '../api/config'
 import ChannelCard from '../components/ChannelCard'
 
@@ -224,6 +229,115 @@ const CHANNEL_META: Record<string, ChannelMeta> = {
       { key: 'channels', label: 'Channels to Join', type: 'tags', placeholder: '#channel' },
       { key: 'allowFrom', label: 'Allowed Senders (DM)', type: 'tags', placeholder: 'nick!user@host', tip: 'nick!user@host format' },
       { key: 'groupAllowFrom', label: 'Allowed Senders (Channels)', type: 'tags', placeholder: 'nick!user@host' },
+      ...COMMON_FIELDS,
+    ],
+  },
+  msteams: {
+    name: 'Microsoft Teams', color: '#6264A7', icon: <TbBriefcase style={{ ...iconStyle, color: '#6264A7' }} />,
+    fields: [
+      { key: 'appId', label: 'App ID', type: 'input', required: true, placeholder: 'Azure Bot App ID' },
+      { key: 'appPassword', label: 'App Password', type: 'password', required: true, tip: 'Azure Bot App Password' },
+      { key: 'allowFrom', label: 'Allowed User IDs', type: 'tags', placeholder: 'Teams user ID' },
+      ...COMMON_FIELDS,
+    ],
+  },
+  feishu: {
+    name: 'Feishu / Lark', color: '#3370FF', icon: <TbMessageCircle style={{ ...iconStyle, color: '#3370FF' }} />,
+    fields: [
+      { key: 'appId', label: 'App ID', type: 'input', required: true },
+      { key: 'appSecret', label: 'App Secret', type: 'password', required: true },
+      { key: 'verificationToken', label: 'Verification Token', type: 'password' },
+      { key: 'encryptKey', label: 'Encrypt Key', type: 'password' },
+      { key: 'allowFrom', label: 'Allowed User IDs', type: 'tags' },
+      ...COMMON_FIELDS,
+    ],
+  },
+  line: {
+    name: 'LINE', color: '#06C755', icon: <SiLine style={{ ...iconStyle, color: '#06C755' }} />,
+    fields: [
+      { key: 'channelAccessToken', label: 'Channel Access Token', type: 'password', required: true },
+      { key: 'channelSecret', label: 'Channel Secret', type: 'password', required: true },
+      { key: 'webhookPath', label: 'Webhook Path', type: 'input', placeholder: '/line' },
+      { key: 'allowFrom', label: 'Allowed User IDs', type: 'tags' },
+      ...COMMON_FIELDS,
+    ],
+  },
+  matrix: {
+    name: 'Matrix', color: '#0DBD8B', icon: <SiMatrix style={{ ...iconStyle, color: '#0DBD8B' }} />,
+    fields: [
+      { key: 'homeserverUrl', label: 'Homeserver URL', type: 'input', required: true, placeholder: 'https://matrix.org' },
+      { key: 'accessToken', label: 'Access Token', type: 'password', required: true },
+      { key: 'userId', label: 'Bot User ID', type: 'input', placeholder: '@bot:matrix.org' },
+      { key: 'allowFrom', label: 'Allowed User IDs', type: 'tags', placeholder: '@user:matrix.org' },
+      ...COMMON_FIELDS,
+    ],
+  },
+  mattermost: {
+    name: 'Mattermost', color: '#0058CC', icon: <SiMattermost style={{ ...iconStyle, color: '#0058CC' }} />,
+    fields: [
+      { key: 'url', label: 'Server URL', type: 'input', required: true, placeholder: 'https://mattermost.example.com' },
+      { key: 'token', label: 'Bot Token', type: 'password', required: true },
+      { key: 'allowFrom', label: 'Allowed User IDs', type: 'tags' },
+      ...COMMON_FIELDS,
+    ],
+  },
+  'nextcloud-talk': {
+    name: 'Nextcloud Talk', color: '#0082C9', icon: <SiNextcloud style={{ ...iconStyle, color: '#0082C9' }} />,
+    fields: [
+      { key: 'url', label: 'Nextcloud URL', type: 'input', required: true, placeholder: 'https://cloud.example.com' },
+      { key: 'username', label: 'Username', type: 'input', required: true },
+      { key: 'password', label: 'Password / App Token', type: 'password', required: true },
+      { key: 'allowFrom', label: 'Allowed User IDs', type: 'tags' },
+      ...COMMON_FIELDS,
+    ],
+  },
+  nostr: {
+    name: 'Nostr', color: '#8E30EB', icon: <TbMessageCircle style={{ ...iconStyle, color: '#8E30EB' }} />,
+    fields: [
+      { key: 'nsec', label: 'Private Key (nsec)', type: 'password', required: true },
+      { key: 'relays', label: 'Relays', type: 'tags', placeholder: 'wss://relay.damus.io' },
+      { key: 'allowFrom', label: 'Allowed Pubkeys', type: 'tags' },
+      ...COMMON_FIELDS,
+    ],
+  },
+  twitch: {
+    name: 'Twitch', color: '#9146FF', icon: <SiTwitch style={{ ...iconStyle, color: '#9146FF' }} />,
+    fields: [
+      { key: 'oauthToken', label: 'OAuth Token', type: 'password', required: true },
+      { key: 'nick', label: 'Bot Username', type: 'input', required: true },
+      { key: 'channels', label: 'Channels to Join', type: 'tags', placeholder: '#channel' },
+      { key: 'allowFrom', label: 'Allowed Users', type: 'tags' },
+      ...COMMON_FIELDS,
+    ],
+  },
+  qqbot: {
+    name: 'QQ Bot', color: '#12B7F5', icon: <TbMessageCircle style={{ ...iconStyle, color: '#12B7F5' }} />,
+    fields: [
+      { key: 'appId', label: 'App ID', type: 'input', required: true, tip: 'QQ 开放平台 App ID' },
+      { key: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
+      { key: 'allowFrom', label: 'Allowed User IDs', type: 'tags' },
+      { key: 'markdownSupport', label: 'Markdown Support', type: 'switch' },
+      { key: 'systemPrompt', label: 'System Prompt', type: 'textarea', placeholder: 'Optional system prompt override' },
+      ...COMMON_FIELDS,
+    ],
+  },
+  zalo: {
+    name: 'Zalo (OA)', color: '#0068FF', icon: <TbMessageCircle style={{ ...iconStyle, color: '#0068FF' }} />,
+    fields: [
+      { key: 'oaId', label: 'OA ID', type: 'input', required: true },
+      { key: 'accessToken', label: 'Access Token', type: 'password', required: true },
+      { key: 'refreshToken', label: 'Refresh Token', type: 'password' },
+      { key: 'webhookPath', label: 'Webhook Path', type: 'input', placeholder: '/zalo' },
+      { key: 'allowFrom', label: 'Allowed User IDs', type: 'tags' },
+      ...COMMON_FIELDS,
+    ],
+  },
+  'synology-chat': {
+    name: 'Synology Chat', color: '#4B7CF3', icon: <TbMessageCircle style={{ ...iconStyle, color: '#4B7CF3' }} />,
+    fields: [
+      { key: 'url', label: 'Synology URL', type: 'input', required: true, placeholder: 'https://nas.example.com' },
+      { key: 'token', label: 'Bot Token', type: 'password', required: true },
+      { key: 'allowFrom', label: 'Allowed User IDs', type: 'tags' },
       ...COMMON_FIELDS,
     ],
   },

@@ -10,10 +10,12 @@ const CONFIG_PATH = join(CONFIG_DIR, 'openclaw.json')
 const ENV_PATH = join(CONFIG_DIR, '.env')
 
 const VALID_SECTIONS = new Set([
-  'agents', 'channels', 'gateway', 'session', 'messages',
-  'talk', 'tools', 'models', 'skills', 'plugins', 'browser',
-  'ui', 'bindings', 'commands', 'env', 'authProfiles',
-  'hooks', 'cron', 'logging',
+  'meta', 'auth', 'acp', 'env', 'wizard', 'diagnostics', 'logging', 'cli', 'update',
+  'browser', 'ui', 'secrets', 'skills', 'plugins', 'models', 'nodeHost',
+  'agents', 'tools', 'bindings', 'broadcast', 'audio', 'media',
+  'messages', 'commands', 'approvals', 'session', 'web', 'channels',
+  'cron', 'hooks', 'discovery', 'canvasHost', 'talk', 'gateway',
+  'memory', 'mcp',
 ])
 
 const DEFAULT_CONFIG = {
@@ -21,11 +23,14 @@ const DEFAULT_CONFIG = {
     defaults: {
       model: { primary: 'anthropic/claude-opus-4-6', fallbacks: [] },
       models: {},
+      thinkingDefault: 'adaptive',
       imageMaxDimensionPx: 2048,
       sandbox: { mode: 'off', scope: 'session' },
       heartbeat: { every: '5m', target: 'last' },
       blockStreamingDefault: 'on',
       typingMode: 'thinking',
+      compaction: { mode: 'safeguard' },
+      memorySearch: { enabled: false },
     },
     list: [],
   },
@@ -41,6 +46,7 @@ const DEFAULT_CONFIG = {
     bind: 'loopback',
     auth: { mode: 'none' },
     tailscale: { mode: 'off', resetOnExit: false },
+    reload: 'hybrid',
   },
   session: {
     scope: 'per-sender',
@@ -52,11 +58,17 @@ const DEFAULT_CONFIG = {
     responsePrefix: 'auto',
     ackReactionScope: 'group-mentions',
     removeAckAfterReply: true,
+    queue: { mode: 'steer' },
   },
   tools: {
     profile: 'full',
     allow: [],
     deny: [],
+    web: { search: { enabled: true }, fetch: { enabled: true } },
+    exec: { timeoutSec: 120 },
+    media: { enabled: true },
+    agentToAgent: { enabled: true },
+    loopDetection: { enabled: true },
   },
   models: {
     mode: 'merge',
@@ -90,7 +102,15 @@ const DEFAULT_CONFIG = {
   env: {},
   cron: { enabled: false, maxConcurrentRuns: 1 },
   hooks: { enabled: false },
-  logging: {},
+  logging: { redactSensitive: 'tools' },
+  memory: { backend: 'builtin' },
+  mcp: { servers: {} },
+  media: { preserveFilenames: false },
+  discovery: { mdns: { enabled: false } },
+  talk: {},
+  auth: { profiles: {}, order: [] },
+  secrets: {},
+  diagnostics: {},
 }
 
 export function isValidSection(section: string): boolean {

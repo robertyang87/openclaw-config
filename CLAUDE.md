@@ -43,30 +43,37 @@ packages/
 - Section whitelist validation on PATCH endpoints
 - `updateSection` merges data (not replaces) to prevent field loss
 
-## Config Schema (aligned with OpenClaw official)
-- `agents.defaults.model`: `{ primary, fallbacks }` format
-- `channels.<key>`: 9 built-in channels (whatsapp, telegram, discord, slack, signal, bluebubbles, imessage, googlechat, irc)
-- `tools`: profile (full/coding/messaging/minimal), allow/deny with tool groups, web, exec, media, agentToAgent
+## Config Schema (aligned with OpenClaw source at github.com/openclaw/openclaw)
+- `agents.defaults`: model (primary/fallbacks), thinkingDefault, compaction, sandbox, heartbeat, typingMode, memorySearch
+- `channels.<key>`: 20+ channels (whatsapp, telegram, discord, slack, signal, bluebubbles, imessage, googlechat, irc, msteams, feishu, line, matrix, mattermost, nextcloud-talk, nostr, twitch, qqbot, zalo, synology-chat)
+- `tools`: profile (full/coding/messaging/minimal), allow/alsoAllow/deny, web.search, web.fetch, exec, media, agentToAgent, links, fs, loopDetection, sandbox
 - `browser`: top-level config (enabled, headless)
 - `cron`: enabled, maxConcurrentRuns
 - `hooks`: event hook system (enabled)
-- `skills`: allowBundled
-- `gateway`: port 18789, bind, auth, tailscale
-- `session`: scope, dmScope, reset, threadBindings
-- `messages`: responsePrefix, ackReactionScope
+- `skills`: allowBundled, entries
+- `gateway`: port 18789, bind, auth, tailscale, reload (off/restart/hot/hybrid)
+- `session`: scope, dmScope, reset (idle/daily), threadBindings (enabled, idleHours, maxAgeHours)
+- `messages`: responsePrefix, ackReactionScope, queue (steer/followup/collect/steer-backlog/queue/interrupt)
 - `commands`: native, text, bash, config, restart
-- `ui.assistant`: name
+- `ui`: assistant (name), seamColor
+- `logging`: level, redactSensitive (tools/all/off)
+- `memory`: backend (builtin/qmd)
+- `mcp`: servers (MCP server definitions)
+- `discovery`: mdns
+- `auth`, `secrets`, `diagnostics`, `media`, `talk`, `acp`, `approvals`, `bindings`, `broadcast`
+- PATCH supports `null` values to delete keys (deepMerge null-aware)
+- API keys masked in GET response (first 4 + last 4 chars)
 
-## Supported Providers (31 total)
-Built-in: Anthropic, OpenAI, Google Gemini, Amazon Bedrock, OpenCode, OpenCode Go, Z.AI
+## Supported Providers (39 total)
+Built-in: Anthropic, OpenAI, Google Gemini, Amazon Bedrock (+ Secret Key), OpenCode, OpenCode Go, Z.AI
 Plugin: DeepSeek, OpenRouter, Mistral, xAI, Groq, GitHub Copilot, MiniMax, Moonshot, Kimi Coding, Together, NVIDIA, Cerebras, Venice, Hugging Face, Model Studio, Qianfan, Volcengine, Xiaomi, Synthetic
-Gateway: Vercel AI Gateway, Kilocode, Cloudflare AI Gateway, LiteLLM
+Gateway: Vercel AI Gateway, Kilocode, Cloudflare AI Gateway, LiteLLM, Anthropic Vertex, Copilot Proxy, BytePlus, Microsoft AI Foundry, SGLang, vLLM, Chutes AI
 Local: Ollama
 
 ## API Endpoints
-- `GET /api/config` — Read full config (merges .env keys into response)
+- `GET /api/config` — Read full config (merges masked .env keys into response)
 - `PUT /api/config` — Write full config (with body validation)
-- `PATCH /api/config/:section` — Update a section (merge, section whitelist enforced)
+- `PATCH /api/config/:section` — Update a section (deep merge, null=delete, section whitelist enforced)
 - `PATCH /api/config/env` — Writes to `~/.openclaw/.env` instead of JSON
 - `POST /api/config/backup` — Create timestamped backup
 - `GET /api/status` — Health check

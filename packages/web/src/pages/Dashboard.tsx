@@ -29,6 +29,8 @@ function parseConfigSummary(config: Record<string, unknown>): ConfigSummary {
   const cron = (config.cron ?? {}) as Record<string, unknown>
   const hooks = (config.hooks ?? {}) as Record<string, unknown>
   const tools = (config.tools ?? {}) as Record<string, unknown>
+  const mcp = (config.mcp ?? {}) as Record<string, unknown>
+  const mcpServers = (mcp.servers ?? {}) as Record<string, unknown>
 
   // Support both new { primary, fallbacks } and legacy flat format
   const modelField = defaults.model
@@ -57,6 +59,7 @@ function parseConfigSummary(config: Record<string, unknown>): ConfigSummary {
   if ((cron as Record<string, unknown>).enabled === true) activeFeatureCount++
   if ((hooks as Record<string, unknown>).enabled === true) activeFeatureCount++
   if (tools.profile && tools.profile !== 'minimal') activeFeatureCount++
+  activeFeatureCount += Object.keys(mcpServers).length
 
   return {
     primaryModel,
@@ -102,7 +105,7 @@ export default function Dashboard() {
     {
       title: 'Features',
       value: summary?.activeFeatureCount ?? 0,
-      subtitle: 'Browser, cron, hooks, tools',
+      subtitle: 'Browser, cron, hooks, tools, MCP',
       icon: <AppstoreOutlined style={{ fontSize: 24, color: '#fdcb6e' }} />,
       path: '/plugins',
       gradient: 'linear-gradient(135deg, rgba(253,203,110,0.12) 0%, rgba(253,203,110,0.04) 100%)',

@@ -31,12 +31,19 @@ export default function Advanced() {
         const agents = (cfg.agents ?? {}) as Record<string, unknown>
         const defaults = (agents.defaults ?? agents) as Record<string, unknown>
         const sandbox = (defaults.sandbox ?? {}) as Record<string, unknown>
+        const compaction = (defaults.compaction ?? {}) as Record<string, unknown>
         const tailscale = (gw.tailscale ?? {}) as Record<string, unknown>
         const reset = (session.reset ?? {}) as Record<string, unknown>
+        const threadBindings = (session.threadBindings ?? {}) as Record<string, unknown>
         const msgs = (cfg.messages ?? {}) as Record<string, unknown>
+        const queue = (msgs.queue ?? {}) as Record<string, unknown>
         const cmds = (cfg.commands ?? {}) as Record<string, unknown>
         const ui = (cfg.ui ?? {}) as Record<string, unknown>
         const assistant = (ui.assistant ?? {}) as Record<string, unknown>
+        const logging = (cfg.logging ?? {}) as Record<string, unknown>
+        const memory = (cfg.memory ?? {}) as Record<string, unknown>
+        const discovery = (cfg.discovery ?? {}) as Record<string, unknown>
+        const mdns = (discovery.mdns ?? {}) as Record<string, unknown>
 
         form.setFieldsValue({
           // Gateway
@@ -46,6 +53,7 @@ export default function Advanced() {
           authMode: (gw.auth as Record<string, unknown>)?.mode ?? 'none',
           tailscaleMode: tailscale.mode ?? 'off',
           tailscaleResetOnExit: tailscale.resetOnExit ?? false,
+          gatewayReload: gw.reload ?? 'hybrid',
 
           // Session
           sessionScope: session.scope ?? 'per-sender',
@@ -53,7 +61,9 @@ export default function Advanced() {
           resetMode: reset.mode ?? 'idle',
           idleMinutes: reset.idleMinutes ?? 30,
           resetAtHour: reset.atHour,
-          threadBindingsEnabled: (session.threadBindings as Record<string, unknown>)?.enabled ?? false,
+          threadBindingsEnabled: threadBindings.enabled ?? false,
+          threadBindingsIdleHours: threadBindings.idleHours,
+          threadBindingsMaxAgeHours: threadBindings.maxAgeHours,
 
           // Agent defaults
           sandboxMode: sandbox.mode ?? 'off',
@@ -62,11 +72,14 @@ export default function Advanced() {
           blockStreaming: defaults.blockStreamingDefault ?? 'on',
           imageMaxDimensionPx: defaults.imageMaxDimensionPx ?? 2048,
           userTimezone: defaults.userTimezone,
+          thinkingDefault: defaults.thinkingDefault ?? 'adaptive',
+          compactionMode: compaction.mode ?? 'safeguard',
 
           // Messages
           responsePrefix: msgs.responsePrefix ?? 'auto',
           ackReactionScope: msgs.ackReactionScope ?? 'group-mentions',
           removeAckAfterReply: msgs.removeAckAfterReply ?? true,
+          queueMode: queue.mode ?? 'steer',
 
           // Commands
           commandsNative: cmds.native ?? 'auto',
@@ -77,6 +90,17 @@ export default function Advanced() {
 
           // UI
           assistantName: assistant.name ?? 'OpenClaw',
+          seamColor: ui.seamColor,
+
+          // Logging
+          logLevel: logging.level,
+          redactSensitive: logging.redactSensitive ?? 'tools',
+
+          // Memory
+          memoryBackend: memory.backend ?? 'builtin',
+
+          // Discovery
+          mdnsEnabled: mdns.enabled ?? false,
         })
       })
       .catch(() => message.error('Failed to load config'))
@@ -94,6 +118,7 @@ export default function Advanced() {
           bind: v.bind,
           auth: { mode: v.authMode },
           tailscale: { mode: v.tailscaleMode, resetOnExit: v.tailscaleResetOnExit },
+          reload: v.gatewayReload,
         }},
         { section: 'session', data: {
           scope: v.sessionScope,
@@ -103,7 +128,11 @@ export default function Advanced() {
             idleMinutes: v.idleMinutes,
             ...(v.resetAtHour != null ? { atHour: v.resetAtHour } : { atHour: null }),
           },
-          threadBindings: { enabled: v.threadBindingsEnabled },
+          threadBindings: {
+            enabled: v.threadBindingsEnabled,
+            ...(v.threadBindingsIdleHours != null ? { idleHours: v.threadBindingsIdleHours } : { idleHours: null }),
+            ...(v.threadBindingsMaxAgeHours != null ? { maxAgeHours: v.threadBindingsMaxAgeHours } : { maxAgeHours: null }),
+          },
         }},
         { section: 'agents', data: {
           defaults: {
@@ -111,6 +140,8 @@ export default function Advanced() {
             typingMode: v.typingMode,
             blockStreamingDefault: v.blockStreaming,
             imageMaxDimensionPx: v.imageMaxDimensionPx,
+            thinkingDefault: v.thinkingDefault,
+            compaction: { mode: v.compactionMode },
             ...(v.userTimezone ? { userTimezone: v.userTimezone } : { userTimezone: null }),
           },
         }},
@@ -118,6 +149,7 @@ export default function Advanced() {
           responsePrefix: v.responsePrefix,
           ackReactionScope: v.ackReactionScope,
           removeAckAfterReply: v.removeAckAfterReply,
+          queue: { mode: v.queueMode },
         }},
         { section: 'commands', data: {
           native: v.commandsNative,
@@ -128,6 +160,17 @@ export default function Advanced() {
         }},
         { section: 'ui', data: {
           assistant: { name: v.assistantName },
+          ...(v.seamColor ? { seamColor: v.seamColor } : { seamColor: null }),
+        }},
+        { section: 'logging', data: {
+          ...(v.logLevel ? { level: v.logLevel } : { level: null }),
+          redactSensitive: v.redactSensitive,
+        }},
+        { section: 'memory', data: {
+          backend: v.memoryBackend,
+        }},
+        { section: 'discovery', data: {
+          mdns: { enabled: v.mdnsEnabled },
         }},
       ])
       message.success('Advanced settings saved')
@@ -200,6 +243,14 @@ export default function Advanced() {
               <Form.Item name="tailscaleResetOnExit" label="Tailscale Reset on Exit" valuePropName="checked">
                 <Switch />
               </Form.Item>
+              <Form.Item name="gatewayReload" label="Reload Strategy">
+                <Select options={[
+                  { label: 'Off', value: 'off' },
+                  { label: 'Restart', value: 'restart' },
+                  { label: 'Hot', value: 'hot' },
+                  { label: 'Hybrid (default)', value: 'hybrid' },
+                ]} />
+              </Form.Item>
             </Card>
 
             <Card title="Session" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
@@ -238,11 +289,43 @@ export default function Advanced() {
               <Form.Item name="threadBindingsEnabled" label="Thread Bindings" valuePropName="checked">
                 <Switch />
               </Form.Item>
+              <Form.Item noStyle shouldUpdate={(prev, cur) => prev.threadBindingsEnabled !== cur.threadBindingsEnabled}>
+                {({ getFieldValue }) =>
+                  getFieldValue('threadBindingsEnabled') ? (
+                    <>
+                      <Form.Item name="threadBindingsIdleHours" label="Thread Idle Hours">
+                        <InputNumber min={1} max={720} style={{ width: '100%' }} placeholder="Auto" />
+                      </Form.Item>
+                      <Form.Item name="threadBindingsMaxAgeHours" label="Thread Max Age Hours">
+                        <InputNumber min={1} max={8760} style={{ width: '100%' }} placeholder="Auto" />
+                      </Form.Item>
+                    </>
+                  ) : null
+                }
+              </Form.Item>
             </Card>
           </Col>
 
           <Col xs={24} md={12}>
             <Card title="Agent Defaults" style={{ border: '1px solid #2a2a4a' }}>
+              <Form.Item name="thinkingDefault" label="Thinking Level">
+                <Select options={[
+                  { label: 'Off', value: 'off' },
+                  { label: 'Minimal', value: 'minimal' },
+                  { label: 'Low', value: 'low' },
+                  { label: 'Medium', value: 'medium' },
+                  { label: 'High', value: 'high' },
+                  { label: 'Extra High', value: 'xhigh' },
+                  { label: 'Adaptive (default)', value: 'adaptive' },
+                ]} />
+              </Form.Item>
+              <Form.Item name="compactionMode" label="Context Compaction">
+                <Select options={[
+                  { label: 'Safeguard (default)', value: 'safeguard' },
+                  { label: 'Aggressive', value: 'aggressive' },
+                  { label: 'Off', value: 'off' },
+                ]} />
+              </Form.Item>
               <Form.Item name="sandboxMode" label="Sandbox Mode">
                 <Select options={[
                   { label: 'Off', value: 'off' },
@@ -292,10 +375,21 @@ export default function Advanced() {
                   { label: 'Group all', value: 'group-all' },
                   { label: 'Direct', value: 'direct' },
                   { label: 'All', value: 'all' },
+                  { label: 'Off', value: 'off' },
                 ]} />
               </Form.Item>
               <Form.Item name="removeAckAfterReply" label="Remove Ack After Reply" valuePropName="checked">
                 <Switch />
+              </Form.Item>
+              <Form.Item name="queueMode" label="Message Queue Mode">
+                <Select options={[
+                  { label: 'Steer (default)', value: 'steer' },
+                  { label: 'Follow-up', value: 'followup' },
+                  { label: 'Collect', value: 'collect' },
+                  { label: 'Steer Backlog', value: 'steer-backlog' },
+                  { label: 'Queue', value: 'queue' },
+                  { label: 'Interrupt', value: 'interrupt' },
+                ]} />
               </Form.Item>
             </Card>
 
@@ -324,6 +418,42 @@ export default function Advanced() {
             <Card title="UI" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
               <Form.Item name="assistantName" label="Assistant Name">
                 <Input placeholder="OpenClaw" />
+              </Form.Item>
+              <Form.Item name="seamColor" label="Seam Color">
+                <Input placeholder="e.g. #6C5CE7" />
+              </Form.Item>
+            </Card>
+
+            <Card title="Logging" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="logLevel" label="Log Level">
+                <Select allowClear placeholder="Default" options={[
+                  { label: 'Debug', value: 'debug' },
+                  { label: 'Info', value: 'info' },
+                  { label: 'Warn', value: 'warn' },
+                  { label: 'Error', value: 'error' },
+                ]} />
+              </Form.Item>
+              <Form.Item name="redactSensitive" label="Redact Sensitive Data">
+                <Select options={[
+                  { label: 'Tools only (default)', value: 'tools' },
+                  { label: 'All', value: 'all' },
+                  { label: 'Off', value: 'off' },
+                ]} />
+              </Form.Item>
+            </Card>
+
+            <Card title="Memory" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="memoryBackend" label="Memory Backend">
+                <Select options={[
+                  { label: 'Built-in (default)', value: 'builtin' },
+                  { label: 'QMD', value: 'qmd' },
+                ]} />
+              </Form.Item>
+            </Card>
+
+            <Card title="Discovery" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="mdnsEnabled" label="mDNS / Bonjour" valuePropName="checked">
+                <Switch />
               </Form.Item>
             </Card>
 

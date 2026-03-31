@@ -140,6 +140,23 @@ const PROVIDERS: Provider[] = [
   { key: 'litellm', name: 'LiteLLM', color: '#475569', envKey: 'LITELLM_API_KEY', category: 'gateway', models: [
     'claude-opus-4-6', 'gpt-4o',
   ]},
+  { key: 'anthropic-vertex', name: 'Anthropic (Vertex AI)', color: '#6C5CE7', envKey: 'GOOGLE_APPLICATION_CREDENTIALS', category: 'gateway', tip: 'Claude via Google Cloud Vertex', models: [
+    'claude-opus-4-6', 'claude-sonnet-4-6',
+  ]},
+  { key: 'copilot-proxy', name: 'Copilot Proxy', color: '#24292e', envKey: 'COPILOT_PROXY_TOKEN', category: 'gateway', models: [
+    'gpt-4o', 'gpt-4.1',
+  ]},
+  { key: 'byteplus', name: 'BytePlus (Volcengine Intl)', color: '#3b82f6', envKey: 'BYTEPLUS_API_KEY', category: 'gateway', models: [
+    'doubao-seed-1-8',
+  ]},
+  { key: 'microsoft-foundry', name: 'Microsoft AI Foundry', color: '#0078D4', envKey: 'AZURE_AI_API_KEY', category: 'gateway', tip: 'Azure AI model catalog', models: [
+    'gpt-5.4', 'Phi-4',
+  ]},
+  { key: 'sglang', name: 'SGLang', color: '#475569', envKey: null, category: 'gateway', tip: 'Self-hosted SGLang server', models: []},
+  { key: 'vllm', name: 'vLLM', color: '#475569', envKey: null, category: 'gateway', tip: 'Self-hosted vLLM server', models: []},
+  { key: 'chutes', name: 'Chutes AI', color: '#10b981', envKey: 'CHUTES_API_KEY', category: 'gateway', models: [
+    'deepseek-ai/DeepSeek-V3.2',
+  ]},
 
   // ========== Local Providers ==========
   { key: 'ollama', name: 'Ollama (Local)', color: '#fdcb6e', envKey: null, category: 'local', models: [
