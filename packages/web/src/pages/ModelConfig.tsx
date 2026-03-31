@@ -13,7 +13,7 @@ import {
   Collapse,
 } from 'antd'
 import { ApiOutlined, SaveOutlined } from '@ant-design/icons'
-import { getConfig, updateConfigSection } from '../api/config'
+import { getConfig, updateConfigSections } from '../api/config'
 import ApiKeyInput from '../components/ApiKeyInput'
 
 const { Title, Text } = Typography
@@ -45,13 +45,14 @@ const PROVIDERS: Provider[] = [
     'gemini-3.1-pro-preview', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview',
     'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite',
   ]},
-  { key: 'amazon-bedrock', name: 'Amazon Bedrock', color: '#FF9900', envKey: 'AWS_ACCESS_KEY_ID', category: 'builtin', tip: 'Also needs AWS_SECRET_ACCESS_KEY', models: [
+  { key: 'amazon-bedrock', name: 'Amazon Bedrock', color: '#FF9900', envKey: 'AWS_ACCESS_KEY_ID', category: 'builtin', tip: 'Access Key ID', models: [
     'us.anthropic.claude-opus-4-6-v1:0', 'us.anthropic.claude-sonnet-4-6-v1:0',
   ]},
+  { key: 'amazon-bedrock-secret', name: 'Amazon Bedrock (Secret)', color: '#FF9900', envKey: 'AWS_SECRET_ACCESS_KEY', category: 'builtin', tip: 'Secret Access Key', models: []},
   { key: 'opencode', name: 'OpenCode (Zen)', color: '#14b8a6', envKey: 'OPENCODE_API_KEY', category: 'builtin', models: [
     'claude-opus-4-6', 'gpt-5.2', 'gemini-3-pro',
   ]},
-  { key: 'opencode-go', name: 'OpenCode Go', color: '#14b8a6', envKey: 'OPENCODE_API_KEY', category: 'builtin', models: [
+  { key: 'opencode-go', name: 'OpenCode Go', color: '#14b8a6', envKey: 'OPENCODE_GO_API_KEY', category: 'builtin', models: [
     'kimi-k2.5', 'glm-5', 'minimax-m2.5',
   ]},
   { key: 'zai', name: 'Z.AI (GLM)', color: '#2563eb', envKey: 'ZAI_API_KEY', category: 'builtin', models: [
@@ -219,16 +220,16 @@ export default function ModelConfig() {
           envData[p.envKey] = values[`${p.key}Key`] ?? ''
         }
       }
-      await Promise.all([
-        updateConfigSection('agents', {
+      await updateConfigSections([
+        { section: 'agents', data: {
           defaults: {
             model: {
               primary: values.primary,
               fallbacks: values.fallbacks ?? [],
             },
           },
-        }),
-        updateConfigSection('env', envData),
+        }},
+        { section: 'env', data: envData },
       ])
       message.success('Model configuration saved')
     } catch {

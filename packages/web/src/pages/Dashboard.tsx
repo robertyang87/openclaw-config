@@ -18,15 +18,17 @@ interface ConfigSummary {
   fallbackCount: number
   channelCount: number
   enabledChannels: number
-  pluginCount: number
+  activeFeatureCount: number
 }
 
 function parseConfigSummary(config: Record<string, unknown>): ConfigSummary {
   const agents = (config.agents ?? {}) as Record<string, unknown>
   const defaults = (agents.defaults ?? agents) as Record<string, unknown>
   const channels = (config.channels ?? {}) as Record<string, unknown>
+  const browser = (config.browser ?? {}) as Record<string, unknown>
+  const cron = (config.cron ?? {}) as Record<string, unknown>
+  const hooks = (config.hooks ?? {}) as Record<string, unknown>
   const tools = (config.tools ?? {}) as Record<string, unknown>
-  const plugins = (config.plugins ?? {}) as Record<string, unknown>
 
   // Support both new { primary, fallbacks } and legacy flat format
   const modelField = defaults.model
@@ -43,20 +45,25 @@ function parseConfigSummary(config: Record<string, unknown>): ConfigSummary {
 
   // Filter out meta keys from channels
   const channelEntries = Object.entries(channels).filter(
-    ([k]) => k !== 'defaults' && k !== 'modelByChannel',
+    ([k, v]) => k !== 'defaults' && k !== 'modelByChannel' && v != null && typeof v === 'object',
   )
   const enabledChannels = channelEntries.filter(
     ([, v]) => (v as Record<string, unknown>)?.enabled === true,
   ).length
 
-  const pluginCount = Object.keys(plugins.entries ?? tools ?? {}).length
+  // Count active features (browser, cron, hooks, tool profile)
+  let activeFeatureCount = 0
+  if (browser.enabled !== false) activeFeatureCount++
+  if ((cron as Record<string, unknown>).enabled === true) activeFeatureCount++
+  if ((hooks as Record<string, unknown>).enabled === true) activeFeatureCount++
+  if (tools.profile && tools.profile !== 'minimal') activeFeatureCount++
 
   return {
     primaryModel,
     fallbackCount,
     channelCount: channelEntries.length,
     enabledChannels,
-    pluginCount,
+    activeFeatureCount,
   }
 }
 
@@ -93,9 +100,9 @@ export default function Dashboard() {
       isText: false,
     },
     {
-      title: 'Plugins',
-      value: summary?.pluginCount ?? 0,
-      subtitle: 'Active tools',
+      title: 'Features',
+      value: summary?.activeFeatureCount ?? 0,
+      subtitle: 'Browser, cron, hooks, tools',
       icon: <AppstoreOutlined style={{ fontSize: 24, color: '#fdcb6e' }} />,
       path: '/plugins',
       gradient: 'linear-gradient(135deg, rgba(253,203,110,0.12) 0%, rgba(253,203,110,0.04) 100%)',
@@ -250,9 +257,13 @@ export default function Dashboard() {
               <div>
                 <Text style={{ color: '#9898b8', fontSize: 12 }}>Status</Text>
                 <br />
-                <Tag color="green" style={{ marginTop: 4 }}>
-                  Config Loaded
-                </Tag>
+                {error ? (
+                  <Tag color="red" style={{ marginTop: 4 }}>Error</Tag>
+                ) : loading ? (
+                  <Tag color="blue" style={{ marginTop: 4 }}>Loading...</Tag>
+                ) : (
+                  <Tag color="green" style={{ marginTop: 4 }}>Config Loaded</Tag>
+                )}
               </div>
               <div>
                 <Text style={{ color: '#9898b8', fontSize: 12 }}>

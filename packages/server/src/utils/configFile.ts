@@ -129,8 +129,13 @@ function deepMerge(
 ): Record<string, unknown> {
   const result = { ...target }
   for (const key of Object.keys(source)) {
-    const tVal = target[key]
     const sVal = source[key]
+    // null means "delete this key"
+    if (sVal === null) {
+      delete result[key]
+      continue
+    }
+    const tVal = target[key]
     if (
       tVal && sVal &&
       typeof tVal === 'object' && !Array.isArray(tVal) &&
@@ -157,7 +162,9 @@ export async function updateSection(
     const content = await readFile(CONFIG_PATH, 'utf-8')
     const config = JSON5.parse(content)
     const existing = (config[section] ?? {}) as Record<string, unknown>
-    config[section] = deepMerge(existing, data)
+    const merged = deepMerge(existing, data)
+    // If merge resulted in an empty object after deletions, keep the key but empty
+    config[section] = merged
     await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8')
   } finally {
     await release()
@@ -197,8 +204,28 @@ export async function readEnvKeys(): Promise<Record<string, string>> {
   return result
 }
 
+const ENV_KEY_RE = /^[A-Za-z_][A-Za-z0-9_]*$/
+
+function sanitizeEnvValue(val: string): string {
+  // Reject values with newlines or null bytes to prevent .env injection
+  if (/[\r\n\0]/.test(val)) {
+    throw new Error('Env value must not contain newlines or null bytes')
+  }
+  // Quote values that contain spaces, #, =, or quotes
+  if (/[\s#="']/.test(val)) {
+    return `"${val.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+  }
+  return val
+}
+
 export async function writeEnvKeys(keys: Record<string, string>): Promise<void> {
   await ensureConfigExists()
+  // Validate keys
+  for (const k of Object.keys(keys)) {
+    if (!ENV_KEY_RE.test(k)) {
+      throw new Error(`Invalid env key: ${k}`)
+    }
+  }
   // Use CONFIG_PATH as lockfile anchor (ENV_PATH may not exist yet)
   const release = await lockfile.lock(CONFIG_PATH, { retries: 3 })
   try {
@@ -214,7 +241,7 @@ export async function writeEnvKeys(keys: Record<string, string>): Promise<void> 
         delete merged[k]
       }
     }
-    const lines = Object.entries(merged).map(([k, v]) => `${k}=${v}`)
+    const lines = Object.entries(merged).map(([k, v]) => `${k}=${sanitizeEnvValue(v)}`)
     await writeFile(ENV_PATH, lines.join('\n') + '\n', { encoding: 'utf-8', mode: 0o600 })
   } finally {
     await release()

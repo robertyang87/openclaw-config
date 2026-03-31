@@ -12,7 +12,7 @@ app.use('/api', configRouter)
 
 async function start() {
   await ensureConfigExists()
-  app.listen(PORT, () => {
+  app.listen(PORT, '127.0.0.1', () => {
     console.log(`\n  OpenClaw Config Server`)
     console.log(`  ─────────────────────`)
     console.log(`  API:    http://localhost:${PORT}/api`)

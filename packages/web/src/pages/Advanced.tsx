@@ -14,7 +14,7 @@ import {
   Switch,
 } from 'antd'
 import { SettingOutlined, SaveOutlined } from '@ant-design/icons'
-import { getConfig, updateConfigSection, backupConfig } from '../api/config'
+import { getConfig, updateConfigSections, backupConfig } from '../api/config'
 
 const { Title, Text } = Typography
 
@@ -87,48 +87,48 @@ export default function Advanced() {
     try {
       setSaving(true)
       const v = form.getFieldsValue()
-      await Promise.all([
-        updateConfigSection('gateway', {
+      await updateConfigSections([
+        { section: 'gateway', data: {
           mode: v.gatewayMode,
           port: v.port,
           bind: v.bind,
           auth: { mode: v.authMode },
           tailscale: { mode: v.tailscaleMode, resetOnExit: v.tailscaleResetOnExit },
-        }),
-        updateConfigSection('session', {
+        }},
+        { section: 'session', data: {
           scope: v.sessionScope,
           dmScope: v.dmScope,
           reset: {
             mode: v.resetMode,
             idleMinutes: v.idleMinutes,
-            ...(v.resetAtHour != null ? { atHour: v.resetAtHour } : {}),
+            ...(v.resetAtHour != null ? { atHour: v.resetAtHour } : { atHour: null }),
           },
           threadBindings: { enabled: v.threadBindingsEnabled },
-        }),
-        updateConfigSection('agents', {
+        }},
+        { section: 'agents', data: {
           defaults: {
             sandbox: { mode: v.sandboxMode, scope: v.sandboxScope },
             typingMode: v.typingMode,
             blockStreamingDefault: v.blockStreaming,
             imageMaxDimensionPx: v.imageMaxDimensionPx,
-            ...(v.userTimezone ? { userTimezone: v.userTimezone } : {}),
+            ...(v.userTimezone ? { userTimezone: v.userTimezone } : { userTimezone: null }),
           },
-        }),
-        updateConfigSection('messages', {
+        }},
+        { section: 'messages', data: {
           responsePrefix: v.responsePrefix,
           ackReactionScope: v.ackReactionScope,
           removeAckAfterReply: v.removeAckAfterReply,
-        }),
-        updateConfigSection('commands', {
+        }},
+        { section: 'commands', data: {
           native: v.commandsNative,
           text: v.commandsText,
           bash: v.commandsBash,
           config: v.commandsConfig,
           restart: v.commandsRestart,
-        }),
-        updateConfigSection('ui', {
+        }},
+        { section: 'ui', data: {
           assistant: { name: v.assistantName },
-        }),
+        }},
       ])
       message.success('Advanced settings saved')
     } catch {

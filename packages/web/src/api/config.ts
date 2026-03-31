@@ -27,6 +27,14 @@ export async function updateConfigSection(
   if (!res.ok) throw new Error('Failed to update config section')
 }
 
+export async function updateConfigSections(
+  sections: { section: string; data: Record<string, unknown> }[],
+): Promise<void> {
+  for (const { section, data } of sections) {
+    await updateConfigSection(section, data)
+  }
+}
+
 export async function backupConfig(): Promise<{ path: string }> {
   const res = await fetch(`${BASE}/config/backup`, { method: 'POST' })
   if (!res.ok) throw new Error('Failed to backup config')

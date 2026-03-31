@@ -14,10 +14,14 @@ const router: ReturnType<typeof Router> = Router()
 router.get('/config', async (_req, res) => {
   try {
     const config = await readConfig()
-    // Merge env keys into response so frontend can display them
+    // Merge masked env keys into response so frontend can show presence without leaking secrets
     const envKeys = await readEnvKeys()
     if (Object.keys(envKeys).length > 0) {
-      config.env = envKeys
+      const masked: Record<string, string> = {}
+      for (const [k, v] of Object.entries(envKeys)) {
+        masked[k] = v.length > 8 ? v.slice(0, 4) + '…' + v.slice(-4) : '••••••••'
+      }
+      config.env = masked
     }
     res.json(config)
   } catch (err) {
@@ -54,6 +58,13 @@ router.patch('/config/:section', async (req, res) => {
 
     // Store env keys in separate .env file instead of config JSON
     if (section === 'env') {
+      // Validate all values are strings
+      for (const [k, v] of Object.entries(req.body)) {
+        if (typeof v !== 'string') {
+          res.status(400).json({ error: `Env value for ${k} must be a string` })
+          return
+        }
+      }
       await writeEnvKeys(req.body as Record<string, string>)
     } else {
       await updateSection(section, req.body)

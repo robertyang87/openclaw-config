@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { Layout, Menu, Typography, Space, Tag } from 'antd'
 import {
@@ -23,8 +23,16 @@ const menuItems = [
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
+  const [connected, setConnected] = useState<boolean | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
+
+  useEffect(() => {
+    fetch('/api/status')
+      .then((r) => r.ok ? r.json() : Promise.reject())
+      .then((d) => setConnected(d.status === 'ok'))
+      .catch(() => setConnected(false))
+  }, [])
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -123,9 +131,13 @@ export default function AppLayout() {
             Visual Configuration Manager
           </Text>
           <Space>
-            <Tag color="green" style={{ borderRadius: 12 }}>
-              Connected
-            </Tag>
+            {connected === null ? (
+              <Tag color="blue" style={{ borderRadius: 12 }}>Checking...</Tag>
+            ) : connected ? (
+              <Tag color="green" style={{ borderRadius: 12 }}>Connected</Tag>
+            ) : (
+              <Tag color="red" style={{ borderRadius: 12 }}>Disconnected</Tag>
+            )}
           </Space>
         </Header>
 

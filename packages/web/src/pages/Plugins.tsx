@@ -15,7 +15,7 @@ import {
   Tag,
 } from 'antd'
 import { AppstoreOutlined, SaveOutlined } from '@ant-design/icons'
-import { getConfig, updateConfigSection } from '../api/config'
+import { getConfig, updateConfigSections } from '../api/config'
 
 const { Title, Text } = Typography
 
@@ -80,8 +80,8 @@ export default function Plugins() {
     try {
       setSaving(true)
       const v = form.getFieldsValue()
-      await Promise.all([
-        updateConfigSection('tools', {
+      await updateConfigSections([
+        { section: 'tools', data: {
           profile: v.toolProfile,
           allow: v.toolAllow?.length ? v.toolAllow : [],
           deny: v.toolDeny?.length ? v.toolDeny : [],
@@ -89,21 +89,21 @@ export default function Plugins() {
           exec: { timeoutSec: v.execTimeoutSec },
           media: { enabled: v.mediaEnabled },
           agentToAgent: { enabled: v.agentToAgentEnabled },
-        }),
-        updateConfigSection('browser', {
+        }},
+        { section: 'browser', data: {
           enabled: v.browserEnabled,
           headless: v.browserHeadless,
-        }),
-        updateConfigSection('cron', {
+        }},
+        { section: 'cron', data: {
           enabled: v.cronEnabled,
           maxConcurrentRuns: v.cronMaxConcurrent,
-        }),
-        updateConfigSection('hooks', {
+        }},
+        { section: 'hooks', data: {
           enabled: v.hooksEnabled,
-        }),
-        updateConfigSection('skills', {
+        }},
+        { section: 'skills', data: {
           allowBundled: v.skillsAllowBundled ?? [],
-        }),
+        }},
       ])
       message.success('Tools & plugins configuration saved')
     } catch {
