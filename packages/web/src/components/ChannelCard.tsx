@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Card, Switch, Tag, Space, Typography, Button } from 'antd'
 import { SettingOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 
 const { Text } = Typography
 
@@ -23,6 +24,8 @@ export default function ChannelCard({
   onToggle,
   onConfigure,
 }: ChannelCardProps) {
+  const { t } = useTranslation()
+
   return (
     <Card
       hoverable
@@ -53,7 +56,7 @@ export default function ChannelCard({
                 color={enabled ? 'green' : configured ? 'orange' : 'default'}
                 style={{ borderRadius: 12, fontSize: 11, marginTop: 2 }}
               >
-                {enabled ? 'Active' : configured ? 'Configured' : 'Not configured'}
+                {enabled ? t('channels.active') : configured ? t('channels.configured') : t('channels.notConfigured')}
               </Tag>
             </div>
           </Space>
@@ -76,7 +79,7 @@ export default function ChannelCard({
           }}
           style={{ color: '#9898b8', padding: '0 8px' }}
         >
-          Configure
+          {t('channels.configure')}
         </Button>
       </Space>
     </Card>

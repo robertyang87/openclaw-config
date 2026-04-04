@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Layout, Menu, Typography, Space, Tag } from 'antd'
+import { Layout, Menu, Typography, Space, Tag, Button } from 'antd'
 import {
   DashboardOutlined,
   ApiOutlined,
@@ -8,24 +8,27 @@ import {
   AppstoreOutlined,
   SettingOutlined,
   ThunderboltOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 
 const { Sider, Content, Header } = Layout
 const { Title, Text } = Typography
-
-const menuItems = [
-  { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
-  { key: '/models', icon: <ApiOutlined />, label: 'Models & Keys' },
-  { key: '/channels', icon: <MessageOutlined />, label: 'IM Channels' },
-  { key: '/plugins', icon: <AppstoreOutlined />, label: 'Tools & Plugins' },
-  { key: '/advanced', icon: <SettingOutlined />, label: 'Advanced' },
-]
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [connected, setConnected] = useState<boolean | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
+  const { t, i18n } = useTranslation()
+
+  const menuItems = [
+    { key: '/dashboard', icon: <DashboardOutlined />, label: t('menu.dashboard') },
+    { key: '/models', icon: <ApiOutlined />, label: t('menu.models') },
+    { key: '/channels', icon: <MessageOutlined />, label: t('menu.channels') },
+    { key: '/plugins', icon: <AppstoreOutlined />, label: t('menu.plugins') },
+    { key: '/advanced', icon: <SettingOutlined />, label: t('menu.advanced') },
+  ]
 
   useEffect(() => {
     fetch('/api/status')
@@ -33,6 +36,10 @@ export default function AppLayout() {
       .then((d) => setConnected(d.status === 'ok'))
       .catch(() => setConnected(false))
   }, [])
+
+  const toggleLang = () => {
+    i18n.changeLanguage(i18n.language === 'zh' ? 'en' : 'zh')
+  }
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -63,7 +70,7 @@ export default function AppLayout() {
                   color="purple"
                   style={{ fontSize: 10, margin: 0, borderRadius: 12 }}
                 >
-                  Config Manager
+                  {t('layout.configManager')}
                 </Tag>
               </>
             )}
@@ -101,7 +108,7 @@ export default function AppLayout() {
               }}
             >
               <Text style={{ fontSize: 11, color: '#9898b8' }}>
-                Config file
+                {t('layout.configFile')}
               </Text>
               <br />
               <Text
@@ -128,15 +135,24 @@ export default function AppLayout() {
           }}
         >
           <Text style={{ color: '#9898b8', fontSize: 13 }}>
-            Visual Configuration Manager
+            {t('layout.visualConfigManager')}
           </Text>
           <Space>
+            <Button
+              type="text"
+              size="small"
+              icon={<GlobalOutlined />}
+              onClick={toggleLang}
+              style={{ color: '#9898b8', fontSize: 12 }}
+            >
+              {i18n.language === 'zh' ? 'EN' : '中文'}
+            </Button>
             {connected === null ? (
-              <Tag color="blue" style={{ borderRadius: 12 }}>Checking...</Tag>
+              <Tag color="blue" style={{ borderRadius: 12 }}>{t('layout.checking')}</Tag>
             ) : connected ? (
-              <Tag color="green" style={{ borderRadius: 12 }}>Connected</Tag>
+              <Tag color="green" style={{ borderRadius: 12 }}>{t('layout.connected')}</Tag>
             ) : (
-              <Tag color="red" style={{ borderRadius: 12 }}>Disconnected</Tag>
+              <Tag color="red" style={{ borderRadius: 12 }}>{t('layout.disconnected')}</Tag>
             )}
           </Space>
         </Header>

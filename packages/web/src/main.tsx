@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { ConfigProvider, theme } from 'antd'
 import App from './App'
+import './i18n'
 import './styles/global.css'
 
 const customTheme = {

@@ -1,4 +1,5 @@
 import { Card, Switch, Tag, Space, Typography } from 'antd'
+import { useTranslation } from 'react-i18next'
 
 const { Text } = Typography
 
@@ -19,6 +20,8 @@ export default function PluginCard({
   enabled,
   onToggle,
 }: PluginCardProps) {
+  const { t } = useTranslation()
+
   return (
     <Card
       style={{
@@ -39,7 +42,7 @@ export default function PluginCard({
             color={enabled ? 'green' : 'default'}
             style={{ borderRadius: 12, fontSize: 11, marginTop: 4 }}
           >
-            {enabled ? 'Active' : 'Inactive'}
+            {enabled ? t('common.active') : t('common.inactive')}
           </Tag>
         </Space>
         <Switch checked={enabled} onChange={onToggle} />

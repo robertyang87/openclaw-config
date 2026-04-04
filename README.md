@@ -1,5 +1,7 @@
 # OpenClaw Config
 
+[中文](./README.zh.md) | English
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-green)](https://nodejs.org/)
 [![pnpm](https://img.shields.io/badge/pnpm-10%2B-orange)](https://pnpm.io/)
@@ -134,7 +136,7 @@ Contributions are welcome! Please follow these steps:
 - [ ] Real-time connection status per channel
 - [ ] Import/export config files
 - [ ] Docker support
-- [ ] i18n (English / Chinese)
+- [x] i18n (English / Chinese)
 
 ## License
 

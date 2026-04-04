@@ -9,6 +9,7 @@ import {
   ArrowRightOutlined,
   RocketOutlined,
 } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import { getConfig } from '../api/config'
 
 const { Title, Text } = Typography
@@ -21,7 +22,7 @@ interface ConfigSummary {
   activeFeatureCount: number
 }
 
-function parseConfigSummary(config: Record<string, unknown>): ConfigSummary {
+function parseConfigSummary(config: Record<string, unknown>, notConfiguredLabel: string): ConfigSummary {
   const agents = (config.agents ?? {}) as Record<string, unknown>
   const defaults = (agents.defaults ?? agents) as Record<string, unknown>
   const channels = (config.channels ?? {}) as Record<string, unknown>
@@ -34,11 +35,11 @@ function parseConfigSummary(config: Record<string, unknown>): ConfigSummary {
 
   // Support both new { primary, fallbacks } and legacy flat format
   const modelField = defaults.model
-  let primaryModel = 'Not configured'
+  let primaryModel = notConfiguredLabel
   let fallbackCount = 0
   if (modelField && typeof modelField === 'object') {
     const m = modelField as Record<string, unknown>
-    primaryModel = (m.primary as string) ?? 'Not configured'
+    primaryModel = (m.primary as string) ?? notConfiguredLabel
     fallbackCount = Array.isArray(m.fallbacks) ? m.fallbacks.length : 0
   } else if (typeof modelField === 'string') {
     primaryModel = modelField
@@ -75,37 +76,38 @@ export default function Dashboard() {
   const [summary, setSummary] = useState<ConfigSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { t } = useTranslation()
 
   useEffect(() => {
     getConfig()
-      .then((cfg) => setSummary(parseConfigSummary(cfg)))
+      .then((cfg) => setSummary(parseConfigSummary(cfg, t('dashboard.notConfigured'))))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [t])
 
   const statCards = [
     {
-      title: 'Primary Model',
+      title: t('dashboard.primaryModel'),
       value: loading ? '-' : (summary?.primaryModel ?? '-'),
-      subtitle: `${summary?.fallbackCount ?? 0} fallback(s)`,
+      subtitle: t('dashboard.fallbacks', { count: summary?.fallbackCount ?? 0 }),
       icon: <ApiOutlined style={{ fontSize: 24, color: '#6C5CE7' }} />,
       path: '/models',
       gradient: 'linear-gradient(135deg, rgba(108,92,231,0.12) 0%, rgba(108,92,231,0.04) 100%)',
       isText: true,
     },
     {
-      title: 'IM Channels',
+      title: t('dashboard.imChannels'),
       value: summary?.enabledChannels ?? 0,
-      subtitle: `${summary?.channelCount ?? 0} configured`,
+      subtitle: t('dashboard.configured', { count: summary?.channelCount ?? 0 }),
       icon: <MessageOutlined style={{ fontSize: 24, color: '#00cec9' }} />,
       path: '/channels',
       gradient: 'linear-gradient(135deg, rgba(0,206,201,0.12) 0%, rgba(0,206,201,0.04) 100%)',
       isText: false,
     },
     {
-      title: 'Features',
+      title: t('dashboard.features'),
       value: summary?.activeFeatureCount ?? 0,
-      subtitle: 'Browser, cron, hooks, tools, MCP',
+      subtitle: t('dashboard.featuresDesc'),
       icon: <AppstoreOutlined style={{ fontSize: 24, color: '#fdcb6e' }} />,
       path: '/plugins',
       gradient: 'linear-gradient(135deg, rgba(253,203,110,0.12) 0%, rgba(253,203,110,0.04) 100%)',
@@ -119,11 +121,11 @@ export default function Dashboard() {
         <Space align="center">
           <RocketOutlined style={{ fontSize: 28, color: '#6C5CE7' }} />
           <Title level={2} style={{ margin: 0, letterSpacing: '-0.5px' }}>
-            Dashboard
+            {t('dashboard.title')}
           </Title>
         </Space>
         <Text style={{ color: '#9898b8', fontSize: 14 }}>
-          Manage your OpenClaw AI assistant configuration
+          {t('dashboard.subtitle')}
         </Text>
       </Space>
 
@@ -136,7 +138,7 @@ export default function Dashboard() {
           }}
         >
           <Text style={{ color: '#ff6b6b' }}>
-            Unable to load config: {error}. Make sure the backend server is running.
+            {t('dashboard.errorLoad', { error })}
           </Text>
         </Card>
       )}
@@ -201,16 +203,16 @@ export default function Dashboard() {
             title={
               <Space>
                 <CheckCircleOutlined style={{ color: '#00b894' }} />
-                <span>Quick Actions</span>
+                <span>{t('dashboard.quickActions')}</span>
               </Space>
             }
             style={{ border: '1px solid #2a2a4a' }}
           >
             <Space direction="vertical" size={12} style={{ width: '100%' }}>
               {[
-                { label: 'Configure API Keys', desc: 'Set up your LLM provider credentials', path: '/models' },
-                { label: 'Enable IM Channels', desc: 'Connect Telegram, Discord, WhatsApp, Slack and more', path: '/channels' },
-                { label: 'Manage Plugins', desc: 'Enable browser, cron, webhook and other tools', path: '/plugins' },
+                { label: t('dashboard.configureApiKeys'), desc: t('dashboard.configureApiKeysDesc'), path: '/models' },
+                { label: t('dashboard.enableChannels'), desc: t('dashboard.enableChannelsDesc'), path: '/channels' },
+                { label: t('dashboard.managePlugins'), desc: t('dashboard.managePluginsDesc'), path: '/plugins' },
               ].map((action) => (
                 <div
                   key={action.path}
@@ -253,24 +255,24 @@ export default function Dashboard() {
 
         <Col xs={24} md={8}>
           <Card
-            title="System Info"
+            title={t('dashboard.systemInfo')}
             style={{ border: '1px solid #2a2a4a' }}
           >
             <Space direction="vertical" size={16} style={{ width: '100%' }}>
               <div>
-                <Text style={{ color: '#9898b8', fontSize: 12 }}>Status</Text>
+                <Text style={{ color: '#9898b8', fontSize: 12 }}>{t('dashboard.status')}</Text>
                 <br />
                 {error ? (
-                  <Tag color="red" style={{ marginTop: 4 }}>Error</Tag>
+                  <Tag color="red" style={{ marginTop: 4 }}>{t('dashboard.statusError')}</Tag>
                 ) : loading ? (
-                  <Tag color="blue" style={{ marginTop: 4 }}>Loading...</Tag>
+                  <Tag color="blue" style={{ marginTop: 4 }}>{t('dashboard.statusLoading')}</Tag>
                 ) : (
-                  <Tag color="green" style={{ marginTop: 4 }}>Config Loaded</Tag>
+                  <Tag color="green" style={{ marginTop: 4 }}>{t('dashboard.statusLoaded')}</Tag>
                 )}
               </div>
               <div>
                 <Text style={{ color: '#9898b8', fontSize: 12 }}>
-                  Config Path
+                  {t('dashboard.configPath')}
                 </Text>
                 <br />
                 <Text
@@ -282,7 +284,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <Text style={{ color: '#9898b8', fontSize: 12 }}>
-                  Gateway
+                  {t('dashboard.gateway')}
                 </Text>
                 <br />
                 <Text
@@ -299,7 +301,7 @@ export default function Dashboard() {
                 style={{ borderRadius: 8 }}
                 onClick={() => navigate('/advanced')}
               >
-                Advanced Settings
+                {t('dashboard.advancedSettings')}
               </Button>
             </Space>
           </Card>

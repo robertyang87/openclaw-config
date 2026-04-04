@@ -30,6 +30,7 @@ import {
   SiNextcloud,
 } from 'react-icons/si'
 import { TbHash, TbMessageCircle, TbBriefcase } from 'react-icons/tb'
+import { useTranslation } from 'react-i18next'
 import { getConfig, updateConfigSection } from '../api/config'
 import ChannelCard from '../components/ChannelCard'
 
@@ -350,6 +351,7 @@ export default function Channels() {
   const [activeChannel, setActiveChannel] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [form] = Form.useForm()
+  const { t } = useTranslation()
 
   useEffect(() => {
     getConfig()
@@ -363,18 +365,21 @@ export default function Channels() {
         }
         setChannels(ch)
       })
-      .catch(() => message.error('Failed to load channels'))
+      .catch(() => message.error(t('channels.failedLoad')))
       .finally(() => setLoading(false))
-  }, [])
+  }, [t])
 
   const handleToggle = async (key: string, enabled: boolean) => {
     const updated = { ...channels, [key]: { ...channels[key], enabled } }
     setChannels(updated)
     try {
       await updateConfigSection('channels', { [key]: { ...channels[key], enabled } })
-      message.success(`${CHANNEL_META[key]?.name ?? key} ${enabled ? 'enabled' : 'disabled'}`)
+      message.success(t('channels.enabledSuccess', {
+        name: CHANNEL_META[key]?.name ?? key,
+        status: enabled ? t('channels.enabled') : t('channels.disabled'),
+      }))
     } catch {
-      message.error('Failed to update')
+      message.error(t('channels.failedUpdate'))
     }
   }
 
@@ -403,10 +408,10 @@ export default function Channels() {
       const updated = { ...channels, [activeChannel]: cleaned }
       setChannels(updated)
       await updateConfigSection('channels', { [activeChannel]: cleaned })
-      message.success(`${CHANNEL_META[activeChannel]?.name ?? activeChannel} configuration saved`)
+      message.success(t('channels.savedSuccess', { name: CHANNEL_META[activeChannel]?.name ?? activeChannel }))
       setDrawerOpen(false)
     } catch {
-      message.error('Failed to save')
+      message.error(t('channels.failedSave'))
     } finally {
       setSaving(false)
     }
@@ -419,10 +424,10 @@ export default function Channels() {
     setChannels(updated)
     try {
       await updateConfigSection('channels', { [activeChannel]: null as unknown as Record<string, unknown> })
-      message.success(`${CHANNEL_META[activeChannel]?.name ?? activeChannel} configuration cleared`)
+      message.success(t('channels.clearedSuccess', { name: CHANNEL_META[activeChannel]?.name ?? activeChannel }))
       setDrawerOpen(false)
     } catch {
-      message.error('Failed to clear')
+      message.error(t('channels.failedClear'))
     }
   }
 
@@ -438,11 +443,11 @@ export default function Channels() {
         <Space align="center">
           <MessageOutlined style={{ fontSize: 28, color: '#00cec9' }} />
           <Title level={2} style={{ margin: 0, letterSpacing: '-0.5px' }}>
-            IM Channels
+            {t('channels.title')}
           </Title>
         </Space>
         <Text style={{ color: '#9898b8' }}>
-          Connect your favorite messaging platforms (built-in channels only)
+          {t('channels.subtitle')}
         </Text>
       </Space>
 
@@ -473,12 +478,12 @@ export default function Channels() {
           activeMeta ? (
             <Space>
               <span style={{ fontSize: 22 }}>{activeMeta.icon}</span>
-              <span>{activeMeta.name} Configuration</span>
+              <span>{activeMeta.name} {t('channels.configuration')}</span>
               <Tag color={activeMeta.color} style={{ borderRadius: 12 }}>
                 {activeChannel}
               </Tag>
             </Space>
-          ) : 'Channel Configuration'
+          ) : t('channels.channelConfig')
         }
         placement="right"
         width={480}
@@ -496,13 +501,13 @@ export default function Channels() {
             onClick={handleClear}
             size="small"
           >
-            Clear
+            {t('channels.clear')}
           </Button>
         }
         footer={
           <div style={{ textAlign: 'right' }}>
             <Space>
-              <Button onClick={() => setDrawerOpen(false)}>Cancel</Button>
+              <Button onClick={() => setDrawerOpen(false)}>{t('channels.cancel')}</Button>
               <Button
                 type="primary"
                 icon={<SaveOutlined />}
@@ -510,7 +515,7 @@ export default function Channels() {
                 loading={saving}
                 style={{ borderRadius: 8 }}
               >
-                Save
+                {t('channels.save')}
               </Button>
             </Space>
           </div>
@@ -537,7 +542,7 @@ export default function Channels() {
                   key={field.key}
                   name={field.key}
                   label={field.label}
-                  rules={field.required ? [{ required: true, message: `${field.label} is required` }] : undefined}
+                  rules={field.required ? [{ required: true, message: t('channels.isRequired', { field: field.label }) }] : undefined}
                 >
                   <InputNumber
                     min={field.min}
@@ -555,11 +560,11 @@ export default function Channels() {
                   key={field.key}
                   name={field.key}
                   label={field.label}
-                  rules={field.required ? [{ required: true, message: `${field.label} is required` }] : undefined}
+                  rules={field.required ? [{ required: true, message: t('channels.isRequired', { field: field.label }) }] : undefined}
                 >
                   <Select
                     options={field.options}
-                    placeholder={`Select ${field.label.toLowerCase()}`}
+                    placeholder={t('channels.selectField', { field: field.label.toLowerCase() })}
                     allowClear
                   />
                 </Form.Item>
@@ -590,7 +595,7 @@ export default function Channels() {
                   key={field.key}
                   name={field.key}
                   label={field.label}
-                  rules={field.required ? [{ required: true, message: `${field.label} is required` }] : undefined}
+                  rules={field.required ? [{ required: true, message: t('channels.isRequired', { field: field.label }) }] : undefined}
                   extra={field.tip ? <Text style={{ fontSize: 12, color: '#9898b8' }}>{field.tip}</Text> : undefined}
                 >
                   <Input.TextArea
@@ -607,7 +612,7 @@ export default function Channels() {
                 key={field.key}
                 name={field.key}
                 label={field.label}
-                rules={field.required ? [{ required: true, message: `${field.label} is required` }] : undefined}
+                rules={field.required ? [{ required: true, message: t('channels.isRequired', { field: field.label }) }] : undefined}
                 extra={field.tip ? <Text style={{ fontSize: 12, color: '#9898b8' }}>{field.tip}</Text> : undefined}
               >
                 <Input

@@ -7,7 +7,6 @@ import {
   message,
   Card,
   Form,
-  Input,
   Select,
   Switch,
   InputNumber,
@@ -16,22 +15,28 @@ import {
   Tag,
 } from 'antd'
 import { AppstoreOutlined, SaveOutlined } from '@ant-design/icons'
-import { getConfig, updateConfigSections, updateConfigSection } from '../api/config'
+import { useTranslation } from 'react-i18next'
+import { getConfig, updateConfigSections } from '../api/config'
 
 const { Title, Text } = Typography
 
-const TOOL_GROUPS = [
-  { key: 'group:runtime', name: 'Runtime', desc: 'Shell execution and background processes' },
-  { key: 'group:fs', name: 'Filesystem', desc: 'Read, write, edit, and apply patches to files' },
-  { key: 'group:web', name: 'Web', desc: 'Web search and page fetching' },
-  { key: 'group:sessions', name: 'Sessions', desc: 'Session management and sub-agents' },
-  { key: 'group:memory', name: 'Memory', desc: 'Long-term memory search and recall' },
-  { key: 'group:ui', name: 'Canvas / UI', desc: 'Node Canvas (present, eval, snapshot)' },
-  { key: 'group:automation', name: 'Automation', desc: 'Cron jobs and gateway control' },
-  { key: 'group:messaging', name: 'Messaging', desc: 'Send messages across channels' },
-  { key: 'group:nodes', name: 'Nodes', desc: 'Discover and target paired devices' },
-  { key: 'group:openclaw', name: 'OpenClaw', desc: 'Internal OpenClaw management tools' },
-]
+const TOOL_GROUP_KEYS = [
+  'runtime', 'fs', 'web', 'sessions', 'memory',
+  'ui', 'automation', 'messaging', 'nodes', 'openclaw',
+] as const
+
+const TOOL_GROUP_NAMES: Record<string, string> = {
+  runtime: 'Runtime',
+  fs: 'Filesystem',
+  web: 'Web',
+  sessions: 'Sessions',
+  memory: 'Memory',
+  ui: 'Canvas / UI',
+  automation: 'Automation',
+  messaging: 'Messaging',
+  nodes: 'Nodes',
+  openclaw: 'OpenClaw',
+}
 
 interface McpServer {
   command: string
@@ -44,6 +49,7 @@ export default function Plugins() {
   const [saving, setSaving] = useState(false)
   const [mcpServers, setMcpServers] = useState<Record<string, McpServer>>({})
   const [form] = Form.useForm()
+  const { t } = useTranslation()
 
   useEffect(() => {
     getConfig()
@@ -59,7 +65,6 @@ export default function Plugins() {
         const exec = (tools.exec ?? {}) as Record<string, unknown>
         const media = (tools.media ?? {}) as Record<string, unknown>
         const agentToAgent = (tools.agentToAgent ?? {}) as Record<string, unknown>
-        const fs = (tools.fs ?? {}) as Record<string, unknown>
         const loopDetection = (tools.loopDetection ?? {}) as Record<string, unknown>
         const sandbox = (tools.sandbox ?? {}) as Record<string, unknown>
         const links = (tools.links ?? {}) as Record<string, unknown>
@@ -84,7 +89,6 @@ export default function Plugins() {
           agentToAgentEnabled: agentToAgent.enabled !== false,
           linksEnabled: links.enabled !== false,
 
-          fsPathGuards: fs.pathGuards ?? [],
           loopDetectionEnabled: loopDetection.enabled !== false,
           sandboxMode: sandbox.mode ?? 'off',
 
@@ -96,9 +100,9 @@ export default function Plugins() {
           skillsAllowBundled: skills.allowBundled ?? [],
         })
       })
-      .catch(() => message.error('Failed to load config'))
+      .catch(() => message.error(t('plugins.loadError')))
       .finally(() => setLoading(false))
-  }, [form])
+  }, [form, t])
 
   const handleSave = async () => {
     try {
@@ -139,17 +143,17 @@ export default function Plugins() {
           allowBundled: v.skillsAllowBundled ?? [],
         }},
       ])
-      message.success('Tools & plugins configuration saved')
+      message.success(t('plugins.savedSuccess'))
     } catch {
-      message.error('Failed to save')
+      message.error(t('plugins.savedError'))
     } finally {
       setSaving(false)
     }
   }
 
-  const toolGroupOptions = TOOL_GROUPS.map((g) => ({
-    label: `${g.key} — ${g.name}`,
-    value: g.key,
+  const toolGroupOptions = TOOL_GROUP_KEYS.map((key) => ({
+    label: `group:${key} — ${TOOL_GROUP_NAMES[key]}`,
+    value: `group:${key}`,
   }))
 
   return (
@@ -158,67 +162,67 @@ export default function Plugins() {
         <Space align="center">
           <AppstoreOutlined style={{ fontSize: 28, color: '#fdcb6e' }} />
           <Title level={2} style={{ margin: 0, letterSpacing: '-0.5px' }}>
-            Tools & Plugins
+            {t('plugins.title')}
           </Title>
         </Space>
         <Text style={{ color: '#9898b8' }}>
-          Configure agent tool access, browser, cron, hooks, and skills
+          {t('plugins.subtitle')}
         </Text>
       </Space>
 
       <Form form={form} layout="vertical" onFinish={handleSave}>
         <Row gutter={[20, 20]}>
           <Col xs={24} md={12}>
-            <Card title="Tool Access Control" style={{ border: '1px solid #2a2a4a' }}>
-              <Form.Item name="toolProfile" label="Tool Profile">
+            <Card title={t('plugins.toolAccessControl')} style={{ border: '1px solid #2a2a4a' }}>
+              <Form.Item name="toolProfile" label={t('plugins.toolProfile')}>
                 <Select options={[
-                  { label: 'Full (all tools enabled)', value: 'full' },
-                  { label: 'Coding (filesystem + runtime)', value: 'coding' },
-                  { label: 'Messaging (channels + web)', value: 'messaging' },
-                  { label: 'Minimal (read-only)', value: 'minimal' },
+                  { label: t('plugins.profileFull'), value: 'full' },
+                  { label: t('plugins.profileCoding'), value: 'coding' },
+                  { label: t('plugins.profileMessaging'), value: 'messaging' },
+                  { label: t('plugins.profileMinimal'), value: 'minimal' },
                 ]} />
               </Form.Item>
-              <Form.Item name="toolAllow" label="Allow (whitelist specific tools/groups)">
+              <Form.Item name="toolAllow" label={t('plugins.allow')}>
                 <Select mode="tags" placeholder="e.g. group:web, group:fs" options={toolGroupOptions} />
               </Form.Item>
-              <Form.Item name="toolAlsoAllow" label="Also Allow (additive to profile)">
+              <Form.Item name="toolAlsoAllow" label={t('plugins.alsoAllow')}>
                 <Select mode="tags" placeholder="e.g. group:messaging" options={toolGroupOptions} />
               </Form.Item>
-              <Form.Item name="toolDeny" label="Deny (blacklist specific tools/groups)">
+              <Form.Item name="toolDeny" label={t('plugins.deny')}>
                 <Select mode="tags" placeholder="e.g. group:runtime" options={toolGroupOptions} />
               </Form.Item>
 
               <Divider style={{ borderColor: '#2a2a4a' }} />
               <Text style={{ color: '#9898b8', fontSize: 12 }}>
-                Available tool groups:
+                {t('plugins.availableGroups')}
               </Text>
               <div style={{ marginTop: 8 }}>
-                {TOOL_GROUPS.map((g) => (
-                  <Tag key={g.key} style={{ marginBottom: 6, borderRadius: 8, fontSize: 11 }}>
-                    {g.key} — {g.desc}
+                {TOOL_GROUP_KEYS.map((key) => (
+                  <Tag key={key} style={{ marginBottom: 6, borderRadius: 8, fontSize: 11 }}>
+                    group:{key} — {t(`plugins.toolGroups.${key}`)}
                   </Tag>
                 ))}
               </div>
             </Card>
 
-            <Card title="Skills" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
-              <Form.Item name="skillsAllowBundled" label="Allowed Bundled Skills">
-                <Select mode="tags" placeholder="Leave empty to allow all bundled skills" />
+            <Card title={t('plugins.skills')} style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="skillsAllowBundled" label={t('plugins.allowedBundledSkills')}>
+                <Select mode="tags" placeholder={t('plugins.allowedBundledSkillsPlaceholder')} />
               </Form.Item>
             </Card>
 
             <Card
-              title="MCP Servers"
+              title={t('plugins.mcpServers')}
               style={{ border: '1px solid #2a2a4a', marginTop: 20 }}
               extra={
                 <Tag color="purple" style={{ borderRadius: 12, fontSize: 11 }}>
-                  {Object.keys(mcpServers).length} configured
+                  {t('plugins.mcpConfigured', { count: Object.keys(mcpServers).length })}
                 </Tag>
               }
             >
               {Object.keys(mcpServers).length === 0 ? (
                 <Text style={{ color: '#9898b8', fontSize: 12 }}>
-                  No MCP servers configured. Add servers to openclaw.json under mcp.servers.
+                  {t('plugins.mcpEmpty')}
                 </Text>
               ) : (
                 <Space direction="vertical" size={8} style={{ width: '100%' }}>
@@ -245,73 +249,73 @@ export default function Plugins() {
           </Col>
 
           <Col xs={24} md={12}>
-            <Card title="Browser" style={{ border: '1px solid #2a2a4a' }}>
-              <Form.Item name="browserEnabled" label="Enabled" valuePropName="checked">
+            <Card title={t('plugins.browser')} style={{ border: '1px solid #2a2a4a' }}>
+              <Form.Item name="browserEnabled" label={t('plugins.browserEnabled')} valuePropName="checked">
                 <Switch />
               </Form.Item>
-              <Form.Item name="browserHeadless" label="Headless Mode" valuePropName="checked">
-                <Switch />
-              </Form.Item>
-            </Card>
-
-            <Card title="Web Tools" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
-              <Form.Item name="webSearchEnabled" label="Web Search" valuePropName="checked">
-                <Switch />
-              </Form.Item>
-              <Form.Item name="webFetchEnabled" label="Web Fetch" valuePropName="checked">
-                <Switch />
-              </Form.Item>
-              <Form.Item name="linksEnabled" label="Link Understanding" valuePropName="checked">
+              <Form.Item name="browserHeadless" label={t('plugins.headlessMode')} valuePropName="checked">
                 <Switch />
               </Form.Item>
             </Card>
 
-            <Card title="Shell Execution" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
-              <Form.Item name="execTimeoutSec" label="Timeout (seconds)">
+            <Card title={t('plugins.webTools')} style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="webSearchEnabled" label={t('plugins.webSearch')} valuePropName="checked">
+                <Switch />
+              </Form.Item>
+              <Form.Item name="webFetchEnabled" label={t('plugins.webFetch')} valuePropName="checked">
+                <Switch />
+              </Form.Item>
+              <Form.Item name="linksEnabled" label={t('plugins.linkUnderstanding')} valuePropName="checked">
+                <Switch />
+              </Form.Item>
+            </Card>
+
+            <Card title={t('plugins.shellExecution')} style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="execTimeoutSec" label={t('plugins.timeoutSec')}>
                 <InputNumber min={1} max={3600} style={{ width: '100%' }} />
               </Form.Item>
-              <Form.Item name="execAskMode" label="Ask Mode">
-                <Select allowClear placeholder="Default (auto)" options={[
-                  { label: 'Always ask', value: 'always' },
-                  { label: 'Auto', value: 'auto' },
-                  { label: 'Never', value: 'never' },
+              <Form.Item name="execAskMode" label={t('plugins.askMode')}>
+                <Select allowClear placeholder={t('plugins.askDefault')} options={[
+                  { label: t('plugins.askAlways'), value: 'always' },
+                  { label: t('plugins.askAuto'), value: 'auto' },
+                  { label: t('plugins.askNever'), value: 'never' },
                 ]} />
               </Form.Item>
             </Card>
 
-            <Card title="Media & Agent" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
-              <Form.Item name="mediaEnabled" label="Audio / Video Understanding" valuePropName="checked">
+            <Card title={t('plugins.mediaAgent')} style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="mediaEnabled" label={t('plugins.audioVideo')} valuePropName="checked">
                 <Switch />
               </Form.Item>
-              <Form.Item name="agentToAgentEnabled" label="Inter-agent Communication" valuePropName="checked">
+              <Form.Item name="agentToAgentEnabled" label={t('plugins.interAgent')} valuePropName="checked">
                 <Switch />
               </Form.Item>
             </Card>
 
-            <Card title="Safety" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
-              <Form.Item name="loopDetectionEnabled" label="Tool Loop Detection" valuePropName="checked">
+            <Card title={t('plugins.safety')} style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="loopDetectionEnabled" label={t('plugins.loopDetection')} valuePropName="checked">
                 <Switch />
               </Form.Item>
-              <Form.Item name="sandboxMode" label="Sandbox Mode">
+              <Form.Item name="sandboxMode" label={t('plugins.sandboxMode')}>
                 <Select options={[
-                  { label: 'Off', value: 'off' },
-                  { label: 'Non-main sessions', value: 'non-main' },
-                  { label: 'All sessions', value: 'all' },
+                  { label: t('plugins.sandboxOff'), value: 'off' },
+                  { label: t('plugins.sandboxNonMain'), value: 'non-main' },
+                  { label: t('plugins.sandboxAll'), value: 'all' },
                 ]} />
               </Form.Item>
             </Card>
 
-            <Card title="Cron" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
-              <Form.Item name="cronEnabled" label="Enabled" valuePropName="checked">
+            <Card title={t('plugins.cron')} style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="cronEnabled" label={t('plugins.cronEnabled')} valuePropName="checked">
                 <Switch />
               </Form.Item>
-              <Form.Item name="cronMaxConcurrent" label="Max Concurrent Runs">
+              <Form.Item name="cronMaxConcurrent" label={t('plugins.cronMaxConcurrent')}>
                 <InputNumber min={1} max={10} style={{ width: '100%' }} />
               </Form.Item>
             </Card>
 
-            <Card title="Hooks" style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
-              <Form.Item name="hooksEnabled" label="Event Hooks System" valuePropName="checked">
+            <Card title={t('plugins.hooks')} style={{ border: '1px solid #2a2a4a', marginTop: 20 }}>
+              <Form.Item name="hooksEnabled" label={t('plugins.hooksEnabled')} valuePropName="checked">
                 <Switch />
               </Form.Item>
             </Card>
@@ -327,7 +331,7 @@ export default function Plugins() {
             size="large"
             style={{ borderRadius: 10, paddingInline: 32 }}
           >
-            Save Changes
+            {t('plugins.saveChanges')}
           </Button>
         </div>
       </Form>

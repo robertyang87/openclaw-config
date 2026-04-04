@@ -13,6 +13,7 @@ import {
   Collapse,
 } from 'antd'
 import { ApiOutlined, SaveOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import { getConfig, updateConfigSections } from '../api/config'
 import ApiKeyInput from '../components/ApiKeyInput'
 
@@ -165,13 +166,6 @@ const PROVIDERS: Provider[] = [
   ]},
 ]
 
-const CATEGORY_LABELS: Record<string, string> = {
-  builtin: 'Built-in Providers',
-  plugin: 'Bundled Plugin Providers',
-  gateway: 'Gateway / Proxy Providers',
-  local: 'Local Providers',
-}
-
 const allModelOptions = PROVIDERS.flatMap((p) =>
   p.models.map((m) => ({
     label: (
@@ -195,6 +189,14 @@ export default function ModelConfig() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [form] = Form.useForm()
+  const { t } = useTranslation()
+
+  const CATEGORY_LABELS: Record<string, string> = {
+    builtin: t('models.builtin'),
+    plugin: t('models.plugin'),
+    gateway: t('models.gateway'),
+    local: t('models.local'),
+  }
 
   useEffect(() => {
     getConfig()
@@ -223,9 +225,9 @@ export default function ModelConfig() {
         }
         form.setFieldsValue(keyValues)
       })
-      .catch(() => message.error('Failed to load config'))
+      .catch(() => message.error(t('models.loadError')))
       .finally(() => setLoading(false))
-  }, [form])
+  }, [form, t])
 
   const handleSave = async () => {
     try {
@@ -248,9 +250,9 @@ export default function ModelConfig() {
         }},
         { section: 'env', data: envData },
       ])
-      message.success('Model configuration saved')
+      message.success(t('models.savedSuccess'))
     } catch {
-      message.error('Failed to save')
+      message.error(t('models.savedError'))
     } finally {
       setSaving(false)
     }
@@ -268,11 +270,11 @@ export default function ModelConfig() {
         <Space align="center">
           <ApiOutlined style={{ fontSize: 28, color: '#6C5CE7' }} />
           <Title level={2} style={{ margin: 0, letterSpacing: '-0.5px' }}>
-            Models & API Keys
+            {t('models.title')}
           </Title>
         </Space>
         <Text style={{ color: '#9898b8' }}>
-          Configure LLM providers and manage API credentials ({PROVIDERS.length} providers supported)
+          {t('models.subtitle', { count: PROVIDERS.length })}
         </Text>
       </Space>
 
@@ -280,13 +282,13 @@ export default function ModelConfig() {
         <Row gutter={[20, 20]}>
           <Col xs={24} md={12}>
             <Card
-              title="Primary Model"
+              title={t('models.primaryModel')}
               style={{ border: '1px solid #2a2a4a' }}
             >
-              <Form.Item name="primary" label="Default Model">
+              <Form.Item name="primary" label={t('models.defaultModel')}>
                 <Select
                   showSearch
-                  placeholder="Select primary model"
+                  placeholder={t('models.selectPrimary')}
                   options={allModelOptions}
                   filterOption={(input, option) =>
                     (option?.value as string)?.toLowerCase().includes(input.toLowerCase()) ?? false
@@ -294,11 +296,11 @@ export default function ModelConfig() {
                 />
               </Form.Item>
 
-              <Form.Item name="fallbacks" label="Fallback Models">
+              <Form.Item name="fallbacks" label={t('models.fallbackModels')}>
                 <Select
                   mode="multiple"
                   showSearch
-                  placeholder="Select fallback models"
+                  placeholder={t('models.selectFallbacks')}
                   options={allModelFlatOptions}
                   filterOption={(input, option) =>
                     (option?.value as string)?.toLowerCase().includes(input.toLowerCase()) ?? false
@@ -310,11 +312,11 @@ export default function ModelConfig() {
 
           <Col xs={24} md={12}>
             <Card
-              title="API Keys"
+              title={t('models.apiKeys')}
               style={{ border: '1px solid #2a2a4a' }}
               extra={
                 <Tag color="orange" style={{ borderRadius: 12, fontSize: 11 }}>
-                  Stored in .env
+                  {t('models.storedInEnv')}
                 </Tag>
               }
             >
@@ -358,7 +360,7 @@ export default function ModelConfig() {
                         ))}
                       {cat === 'local' && (
                         <Text style={{ fontSize: 12, color: '#9898b8' }}>
-                          Ollama runs locally — no API key needed.
+                          {t('models.ollamaNote')}
                         </Text>
                       )}
                     </Space>
@@ -378,7 +380,7 @@ export default function ModelConfig() {
             size="large"
             style={{ borderRadius: 10, paddingInline: 32 }}
           >
-            Save Changes
+            {t('models.saveChanges')}
           </Button>
         </div>
       </Form>
